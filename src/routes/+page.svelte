@@ -173,7 +173,14 @@
 		{notesOnMap.features.length} notes loaded
 	</div>
 
-	{#snippet note(entry: { username?: string; content: string; time?: number; user?: any })}
+	{#snippet note(entry: {
+		username?: string;
+		profile?: { name?: string };
+		content: string;
+		time?: number;
+		user?: any;
+	})}
+		{@const username = entry.username ?? entry.user?.name ?? entry.profile?.name ?? 'Anonymous'}
 		<div class="space-y-1">
 			<div>{entry.content}</div>
 			{#if entry.time}
@@ -183,10 +190,10 @@
 							class="text-blue-500 hover:underline"
 							onclick={() => openProfileModal(entry.user)}
 						>
-							{entry.username ?? 'Anonymous'}
+							{username}
 						</button>
 					{:else}
-						{entry.username ?? 'Anonymous'}
+						{username}
 					{/if},
 					{new Date(entry.time * 1000).toLocaleString()}
 				</div>
@@ -222,7 +229,8 @@
 							}
 						}
 					}
-					return allChildren;
+
+					return allChildren.sort((a, b) => b.properties.time - a.properties.time);
 				})() then children}
 					<div class="space-y-4">
 						{#each children as child, i (child.properties?.id || i)}
@@ -244,7 +252,10 @@
 					<p class="text-red-500">Failed to load cluster children: {error.message}</p>
 				{/await}
 			{:else}
-				{@render note(clickedFeature)}
+				{@render note({
+					...clickedFeature,
+					user: clickedFeature.user ? JSON.parse(clickedFeature.user) : null
+				} as any)}
 			{/if}
 		{:else}
 			<p class="text-gray-600">Click on a feature to see its properties here.</p>
