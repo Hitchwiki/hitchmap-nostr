@@ -4,6 +4,7 @@
 	import { type GeoJSONSource } from 'maplibre-gl';
 	import { onMount } from 'svelte';
 	import { GeoJSON, MapLibre, MarkerLayer } from 'svelte-maplibre';
+	import UserProfileModal from '$lib/components/UserProfileModal.svelte';
 
 	let map: maplibregl.Map | undefined = $state();
 
@@ -89,6 +90,9 @@
 
 	let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
+	let profileModalOpen = $state(false);
+	let selectedUserProfile: any = $state(null);
+
 	$effect(() => {
 		if (eventBuffer.length === 0) return;
 
@@ -104,6 +108,11 @@
 			debounceTimeout = null;
 		}, 500); // adjust debounce delay as needed
 	});
+
+	function openProfileModal(userProfile: any) {
+		selectedUserProfile = userProfile;
+		profileModalOpen = true;
+	}
 
 	const processEvent = async (event: any) => {
 		const feature = await eventToFeature(event);
@@ -164,12 +173,21 @@
 		{notesOnMap.features.length} notes loaded
 	</div>
 
-	{#snippet note(entry: { username?: string; content: string; time?: number })}
+	{#snippet note(entry: { username?: string; content: string; time?: number; user?: any })}
 		<div class="space-y-1">
 			<div>{entry.content}</div>
 			{#if entry.time}
 				<div class="text-xs text-gray-500">
-					– {entry.username ?? 'Anonymous'},
+					– {#if entry.user}
+						<button
+							class="text-blue-500 hover:underline"
+							onclick={() => openProfileModal(entry.user)}
+						>
+							{entry.username ?? 'Anonymous'}
+						</button>
+					{:else}
+						{entry.username ?? 'Anonymous'}
+					{/if},
 					{new Date(entry.time * 1000).toLocaleString()}
 				</div>
 			{/if}
@@ -233,6 +251,8 @@
 		{/if}
 	</div>
 </div>
+
+<UserProfileModal bind:open={profileModalOpen} user={selectedUserProfile} />
 
 <MapLibre
 	bind:map
