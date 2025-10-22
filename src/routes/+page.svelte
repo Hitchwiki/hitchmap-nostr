@@ -209,8 +209,8 @@
 		</div>
 	{/snippet}
 
-	<div class="max-h-1/3 overflow-y-auto rounded bg-white bg-opacity-90 p-4 text-sm shadow-md">
-		{#if clickedFeature}
+	{#if clickedFeature}
+		<div class="max-h-1/3 overflow-y-auto rounded bg-white bg-opacity-90 p-4 text-sm shadow-md">
 			{#if clickedFeature.cluster}
 				<h2 class="mb-2 font-bold">Cluster ({clickedFeature.point_count} points)</h2>
 				{#await (async () => {
@@ -261,10 +261,8 @@
 					user: clickedFeature.user ? JSON.parse(clickedFeature.user) : null
 				} as any)}
 			{/if}
-		{:else}
-			<p class="text-gray-600">Click on a feature to see its properties here.</p>
-		{/if}
-	</div>
+		</div>
+	{/if}
 </div>
 
 <UserProfileModal bind:open={profileModalOpen} user={selectedUserProfile} />
@@ -272,10 +270,11 @@
 <MapLibre
 	bind:map
 	center={[50, 20]}
-	zoom={4}
+	zoom={2}
 	standardControls
 	style="https://tiles.openfreemap.org/styles/liberty"
 	onclick={() => (clickedFeature = null)}
+	projection={{ type: 'globe' }}
 >
 	{#if isLoadingNotes}
 		<div class="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -291,7 +290,7 @@
 		id="notes"
 		data={notesOnMap}
 		cluster={{
-			radius: 50,
+			radius: 75,
 			maxZoom: 14,
 			properties: {
 				point_count: ['+', ['get', 'point_count']]
