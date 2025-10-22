@@ -13,7 +13,7 @@
 	}
 
 	let { user, open = $bindable(false) }: { user: UserProfile; open: boolean } = $props();
-	let closeBtn: HTMLButtonElement;
+	let closeBtn: HTMLButtonElement | undefined = $state();
 
 	function close() {
 		open = false;
@@ -37,134 +37,74 @@
 
 {#if open}
 	<div
-		class="modal-overlay"
+		class="z-100 fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm"
 		role="button"
 		tabindex="0"
 		aria-label="Close modal"
 		onclick={close}
 		onkeydown={handleOverlayKeydown}
 	>
-		<div class="modal" role="dialog" aria-labelledby="modal-title">
-			<button class="close-btn" bind:this={closeBtn} onclick={close} aria-label="Close modal"
-				>×</button
+		<div
+			class="relative max-h-[80vh] w-11/12 max-w-md overflow-y-auto rounded-xl border border-gray-300 bg-white p-6 text-gray-900 shadow-2xl"
+			role="dialog"
+			aria-labelledby="modal-title"
+		>
+			<button
+				class="absolute right-3 top-3 flex size-8 cursor-pointer items-center justify-center rounded-full border-none bg-none text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900"
+				bind:this={closeBtn}
+				onclick={close}
+				aria-label="Close modal">×</button
 			>
-			<div class="profile-header">
+			<div class="mb-5 flex items-center gap-4">
 				{#if user.picture}
-					<img src={user.picture} alt="" class="profile-picture" />
+					<img
+						src={user.picture}
+						alt=""
+						class="w-15 h-15 rounded-full border-2 border-gray-300 object-cover"
+					/>
 				{/if}
-				<h2 id="modal-title">{user.display_name || user.name || 'User'}</h2>
+				<h2 id="modal-title" class="m-0 text-xl font-semibold">
+					{user.display_name || user.name || 'User'}
+				</h2>
 			</div>
 			<div class="profile-details">
 				{#if user.name}
-					<p><strong>Name:</strong> {user.name}</p>
+					<p class="my-2 leading-relaxed">
+						<strong class="text-gray-600">Name:</strong>
+						{user.name}
+					</p>
 				{/if}
 				{#if user.about}
-					<p><strong>About:</strong> {user.about}</p>
+					<p class="my-2 leading-relaxed">
+						<strong class="text-gray-600">About:</strong>
+						{user.about}
+					</p>
 				{/if}
 				{#if user.nip05}
-					<p><strong>NIP-05:</strong> {user.nip05}</p>
+					<p class="my-2 leading-relaxed">
+						<strong class="text-gray-600">NIP-05:</strong>
+						{user.nip05}
+					</p>
 				{/if}
 				{#if user.website}
-					<p>
-						<strong>Website:</strong>
+					<p class="my-2 leading-relaxed">
+						<strong class="text-gray-600">Website:</strong>
 						<a href={user.website} target="_blank" rel="noopener noreferrer">{user.website}</a>
 					</p>
 				{/if}
 				{#if user.bot !== undefined}
-					<p><strong>Bot:</strong> {user.bot ? 'Yes' : 'No'}</p>
+					<p class="my-2 leading-relaxed">
+						<strong class="text-gray-600">Bot:</strong>
+						{user.bot ? 'Yes' : 'No'}
+					</p>
 				{/if}
-				<p><strong>Pubkey:</strong> <code>{user.pubkey}</code></p>
+				<p class="my-2 leading-relaxed">
+					<strong class="text-gray-600">Pubkey:</strong>
+					<code class="break-all rounded bg-gray-200 px-1.5 py-0.5 font-mono text-sm"
+						>{user.pubkey}</code
+					>
+				</p>
 			</div>
 		</div>
 	</div>
 {/if}
-
-<style>
-	.modal-overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background: rgba(0, 0, 0, 0.7);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 1000;
-		backdrop-filter: blur(2px);
-	}
-
-	.modal {
-		background: #1a1a1a;
-		color: #ffffff;
-		padding: 24px;
-		border-radius: 12px;
-		max-width: 400px;
-		width: 90%;
-		max-height: 80vh;
-		overflow-y: auto;
-		position: relative;
-		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-		border: 1px solid #333;
-	}
-
-	.close-btn {
-		position: absolute;
-		top: 12px;
-		right: 12px;
-		background: none;
-		border: none;
-		font-size: 24px;
-		color: #ccc;
-		cursor: pointer;
-		padding: 4px;
-		border-radius: 4px;
-		transition:
-			background-color 0.2s,
-			color 0.2s;
-	}
-
-	.close-btn:hover {
-		background-color: #333;
-		color: #fff;
-	}
-
-	.profile-header {
-		display: flex;
-		align-items: center;
-		gap: 16px;
-		margin-bottom: 20px;
-	}
-
-	.profile-picture {
-		width: 60px;
-		height: 60px;
-		border-radius: 50%;
-		object-fit: cover;
-		border: 2px solid #555;
-	}
-
-	.profile-header h2 {
-		margin: 0;
-		font-size: 1.5em;
-		font-weight: 600;
-	}
-
-	.profile-details p {
-		margin: 8px 0;
-		line-height: 1.5;
-	}
-
-	.profile-details strong {
-		color: #aaa;
-	}
-
-	.profile-details code {
-		background: #2a2a2a;
-		padding: 2px 6px;
-		border-radius: 4px;
-		font-family: monospace;
-		font-size: 0.9em;
-		word-break: break-all;
-	}
-</style>
