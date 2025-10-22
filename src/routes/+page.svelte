@@ -1,10 +1,10 @@
 <script lang="ts">
+	import UserProfileModal from '$lib/components/UserProfileModal.svelte';
 	import { decodeGeoHash } from '$lib/geohash';
 	import { availableRelays, ndk } from '$lib/ndk.svelte';
 	import { type GeoJSONSource } from 'maplibre-gl';
 	import { onMount } from 'svelte';
 	import { GeoJSON, MapLibre, MarkerLayer } from 'svelte-maplibre';
-	import UserProfileModal from '$lib/components/UserProfileModal.svelte';
 
 	let map: maplibregl.Map | undefined = $state();
 
@@ -52,15 +52,35 @@
 	async function eventToFeature(note: any) {
 		const coordinates = extractLocation(note);
 		if (!coordinates) return null;
+
 		let username: string | null = null;
 		let content = note.content;
-		const match = content.match(/^hitchmap\.com\s*(.*?):\s*/);
-		if (match) {
-			username = match[1] ? match[1].trim() : null;
-			content = content.slice(match[0].length);
+		let time = note.created_at;
+		let rating = note.rating;
+
+		if (note.kind === 36820) {
+			try {
+				const data = JSON.parse(content);
+
+				username = data?.hitchhikers?.[0]?.nickname ?? null;
+				content = data.comment || content;
+				if (data.submission_time) {
+					const date = new Date(data.submission_time);
+					if (!isNaN(date.getTime())) time = Math.floor(date.getTime() / 1000);
+				}
+				if (typeof data.rating !== 'undefined') rating = data.rating;
+			} catch (error) {
+				console.error('Failed to parse JSON for kind 36820 event:', error);
+				return null;
+			}
+		} else {
+			const match = content.match(/^hitchmap\.com\s*(.*?):\s*/);
+			if (match) {
+				username = match[1]?.trim() || null;
+				content = content.slice(match[0].length);
+			}
+			content = content.replace(/\s*#hitchhiking\s*$/i, '').trim();
 		}
-		// Remove trailing " #hitchhiking" (with or without leading space)
-		content = content.replace(/\s*#hitchhiking\s*$/i, '').trim();
 
 		const user = await ndk.fetchUser(note.pubkey);
 		const userProfile = await user?.fetchProfile();
@@ -76,12 +96,13 @@
 				id: note.id,
 				pubkey: note.pubkey,
 				user: profile,
-				time: note.created_at,
+				time,
 				username,
 				content,
 				geohash: coordinates.geohash,
 				coordinates: coordinates.lngLat,
-				tags: note.tags
+				tags: note.tags,
+				rating
 			}
 		};
 	}
@@ -126,7 +147,7 @@
 	onMount(async () => {
 		const sub = ndk.subscribe(
 			{
-				kinds: [1]
+				kinds: [1, 36820] as any[]
 			},
 			{ closeOnEose: false, cacheUnconstrainFilter: ['limit'] },
 			{
@@ -258,7 +279,10 @@
 			{:else}
 				{@render note({
 					...clickedFeature,
-					user: clickedFeature.user ? JSON.parse(clickedFeature.user) : null
+					user:
+						typeof clickedFeature.user === 'string'
+							? JSON.parse(clickedFeature.user)
+							: clickedFeature.user
 				} as any)}
 			{/if}
 		</div>
