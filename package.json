@@ -34,6 +34,7 @@
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.18",
     "@tailwindcss/vite": "^4.1.13",
+    "@types/geojson": "^7946.0.16",
     "@types/node": "^22",
     "@vitest/browser": "^3.2.4",
     "eslint": "^9.36.0",
@@ -61,5 +62,13 @@
       "@tailwindcss/oxide"
     ]
   },
-  "packageManager": "pnpm@8.15.7+sha512.c85cd21b6da10332156b1ca2aa79c0a61ee7ad2eb0453b88ab299289e9e8ca93e6091232b25c07cbf61f6df77128d9c849e5c9ac6e44854dbd211c49f3a67adc"
+  "packageManager": "pnpm@10.19.0",
+  "dependencies": {
+    "@nostr-dev-kit/ndk": "^2.18.1",
+    "@nostr-dev-kit/ndk-cache-dexie": "^2.6.44",
+    "@nostr-dev-kit/svelte": "^3.0.1",
+    "geojson": "^0.5.0",
+    "maplibre-gl": "^5.9.0",
+    "svelte-maplibre": "^1.2.3"
+  }
 }
