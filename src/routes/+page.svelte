@@ -8,6 +8,8 @@
 
 	let map: maplibregl.Map | undefined = $state();
 
+	let isLoadingNotes = $state(true);
+
 	const getRelayStatus = $derived.by(() => {
 		const statusMap = new Map<string, string>();
 		for (const relay of ndk.$pool.relays.values()) {
@@ -140,8 +142,10 @@
 			}
 		);
 
-		sub.on('eose', () => {
-			console.log('Finished loading notes – listening...');
+		sub.on('eose', (relay: any) => {
+			console.log(`Received EOSE from ${relay.url}`, relay);
+			console.log('Finished loading notes from first relay – listening...');
+			isLoadingNotes = false;
 		});
 	});
 </script>
@@ -273,6 +277,16 @@
 	style="https://tiles.openfreemap.org/styles/liberty"
 	onclick={() => (clickedFeature = null)}
 >
+	{#if isLoadingNotes}
+		<div class="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
+			<div class="flex flex-col items-center gap-4 rounded-lg bg-white p-6 shadow-lg">
+				<div
+					class="size-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"
+				></div>
+				<p class="text-lg font-medium">Loading notes...</p>
+			</div>
+		</div>
+	{/if}
 	<GeoJSON
 		id="notes"
 		data={notesOnMap}
