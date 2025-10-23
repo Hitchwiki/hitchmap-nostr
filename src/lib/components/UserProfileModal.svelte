@@ -1,18 +1,11 @@
 <script lang="ts">
+	import type { NDKUserProfile } from '@nostr-dev-kit/ndk';
 	import { onMount } from 'svelte';
 
-	interface UserProfile {
-		display_name?: string;
-		name?: string;
-		about?: string;
-		picture?: string;
-		pubkey: string;
-		nip05?: string;
-		website?: string;
-		bot?: boolean;
-	}
-
-	let { user, open = $bindable(false) }: { user: UserProfile; open: boolean } = $props();
+	let {
+		user,
+		open = $bindable(false)
+	}: { user: NDKUserProfile & { pubkey: string }; open: boolean } = $props();
 	let closeBtn: HTMLButtonElement | undefined = $state();
 
 	function close() {
@@ -37,7 +30,7 @@
 
 {#if open}
 	<div
-		class="z-100 fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+		class="fixed inset-0 z-100 flex items-center justify-center bg-black/30 backdrop-blur-sm"
 		role="button"
 		tabindex="0"
 		aria-label="Close modal"
@@ -50,7 +43,7 @@
 			aria-labelledby="modal-title"
 		>
 			<button
-				class="absolute right-3 top-3 flex size-8 cursor-pointer items-center justify-center rounded-full border-none bg-none text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900"
+				class="absolute top-3 right-3 flex size-8 cursor-pointer items-center justify-center rounded-full border-none bg-none text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900"
 				bind:this={closeBtn}
 				onclick={close}
 				aria-label="Close modal">×</button
@@ -60,7 +53,7 @@
 					<img
 						src={user.picture}
 						alt=""
-						class="w-15 h-15 rounded-full border-2 border-gray-300 object-cover"
+						class="h-15 w-15 rounded-full border-2 border-gray-300 object-cover"
 					/>
 				{/if}
 				<h2 id="modal-title" class="m-0 text-xl font-semibold">
@@ -100,7 +93,7 @@
 				{/if}
 				<p class="my-2 leading-relaxed">
 					<strong class="text-gray-600">Pubkey:</strong>
-					<code class="break-all rounded bg-gray-200 px-1.5 py-0.5 font-mono text-sm"
+					<code class="rounded bg-gray-200 px-1.5 py-0.5 font-mono text-sm break-all"
 						>{user.pubkey}</code
 					>
 				</p>

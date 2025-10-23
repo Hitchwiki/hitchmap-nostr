@@ -1,7 +1,8 @@
 <script lang="ts">
 	import UserProfileModal from '$lib/components/UserProfileModal.svelte';
-	import { EventProcessorFactory } from '$lib/eventProcessor';
+	import { EventProcessorWorkerManager } from '$lib/eventProcessor';
 	import { availableRelays, ndk } from '$lib/ndk.svelte';
+	import type { NDKUserProfile } from '@nostr-dev-kit/ndk';
 	import type { Feature, Geometry } from 'geojson';
 	import { type GeoJSONSource } from 'maplibre-gl';
 	import { onMount } from 'svelte';
@@ -41,78 +42,66 @@
 		return statusMap;
 	});
 
-	let notesOnMap = $state({
+	let notesOnMap = $state.raw({
 		type: 'FeatureCollection' as const,
 		features: [] as any[]
 	});
 
 	let clickedFeature: any | null | undefined = $state();
 
-	let eventBuffer: any[] = $state([]);
-
-	let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
-
 	let profileModalOpen = $state(false);
-	let selectedUserProfile: any = $state(null);
+	let selectedUserProfile: (NDKUserProfile & { pubkey: string }) | null = $state(null);
 
-	const BATCH_SIZE = 2500;
-
-	$effect(() => {
-		if (eventBuffer.length === 0) return;
-		if (debounceTimeout) return; // Do not clear or reschedule if already pending
-
-		console.log(`Scheduling processing of ${eventBuffer.length} new notes (debounced).`);
-
-		debounceTimeout = setTimeout(() => {
-			const bufferSnapshot = eventBuffer.slice(0, BATCH_SIZE);
-			console.log(
-				`Processing buffer of ${bufferSnapshot.length} new notes (debounced, max ${BATCH_SIZE} at a time).`
-			);
-			notesOnMap = {
-				...notesOnMap,
-				features: [...notesOnMap.features, ...bufferSnapshot]
-			};
-			eventBuffer = eventBuffer.slice(bufferSnapshot.length);
-			debounceTimeout = null;
-		}, 1000); // process every 1 second
-	});
-
-	function openProfileModal(userProfile: any) {
-		selectedUserProfile = userProfile;
+	function openProfileModal(userProfile: NDKUserProfile, pubkey: string) {
+		selectedUserProfile = { ...userProfile, pubkey };
 		profileModalOpen = true;
 	}
 
+	const workerManager = new EventProcessorWorkerManager();
+	let eventsToProcess = $state(0);
+	let processedEvents = $state(0);
+	let processedEventsList: any[] = $state([]);
+
 	const processEvent = async (event: any) => {
-		const processor = EventProcessorFactory.createProcessor(event, ndk);
-		const feature = await processor.process(event);
-		if (feature) {
-			eventBuffer.push(feature);
+		eventsToProcess++;
+
+		const processedEvent = await workerManager.processWithWorker(event);
+		processedEvents++;
+
+		if (processedEvent) {
+			processedEventsList.push(processedEvent);
+		}
+
+		if (processedEvents === eventsToProcess) {
+			notesOnMap = {
+				...notesOnMap,
+				features: processedEventsList
+			};
+
+			isLoadingNotes = false;
 		}
 	};
 
 	onMount(async () => {
 		const sub = ndk.subscribe(
 			{
-				limit: 1000 /** @todo Maybe make an environment variable. */,
+				limit: 150 /** @todo Maybe make an environment variable. */,
 				kinds: [1, 36820] as any[],
 				'#t': ['hitchmap']
 				// This will result in too few results.
 				// '#g': [...'0123456789bcdefghjkmnpqrstuvwxyz']
 			},
-			{ closeOnEose: false, cacheUnconstrainFilter: ['limit'] },
+			{
+				closeOnEose: false,
+				cacheUnconstrainFilter: ['limit']
+			},
 			{
 				onEvents: (events) => {
-					console.log(`Received batch of ${events.length} notes from cache.`);
 					for (const event of events) {
 						processEvent(event);
 					}
 				},
 				onEvent: (event, relay) => {
-					if (!relay) {
-						console.log('Received event from cache');
-					} else {
-						console.log('Received event from relay', relay.url);
-					}
 					processEvent(event);
 				}
 			}
@@ -120,7 +109,6 @@
 
 		sub.on('eose', (relay: any) => {
 			console.log('Finished loading notes – listening...');
-			isLoadingNotes = false;
 		});
 	});
 </script>
@@ -148,31 +136,33 @@
 		{/each}
 	</div>
 
-	<div class="bg-opacity-90 rounded bg-white p-4 text-sm shadow-md">
-		{notesOnMap.features.length} notes loaded (still loading: {eventBuffer.length})
-	</div>
-
 	{#snippet note(entry: {
+		pubkey?: string;
 		username?: string;
-		profile?: { name?: string };
 		content: string;
 		time?: number;
 		user?: any;
 	})}
-		{@const username = entry.username ?? entry.user?.name ?? entry.profile?.name ?? 'Anonymous'}
+		{@const username = entry.username ?? entry.user?.name ?? 'Anonymous'}
 		<div class="space-y-1">
 			<div>{entry.content}</div>
 			{#if entry.time}
 				<div class="text-xs text-gray-500">
-					– {#if entry.user}
-						<button
-							class="text-blue-500 hover:underline"
-							onclick={() => openProfileModal(entry.user)}
-						>
-							{username}
-						</button>
-					{:else}
-						{username}
+					- {#if entry.pubkey}
+						{#await ndk.fetchUser(entry.pubkey) then user}
+							{#await user?.fetchProfile() then profile}
+								{#if profile}
+									<button
+										class="text-blue-500 hover:underline"
+										onclick={() => openProfileModal(profile, entry.pubkey!)}
+									>
+										{username ?? profile?.name ?? 'Anonymous'}
+									</button>
+								{:else}
+									{username ?? 'Anonymous'}
+								{/if}
+							{/await}
+						{/await}
 					{/if},
 					{new Date(entry.time * 1000).toLocaleString()}
 				</div>
@@ -243,7 +233,9 @@
 	{/if}
 </div>
 
-<UserProfileModal bind:open={profileModalOpen} user={selectedUserProfile} />
+{#if selectedUserProfile}
+	<UserProfileModal bind:open={profileModalOpen} user={selectedUserProfile} />
+{/if}
 
 {#if isLoadingNotes}
 	<div class="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -251,7 +243,7 @@
 			<div
 				class="size-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"
 			></div>
-			<p class="text-lg font-medium">Loading notes...</p>
+			<p class="text-lg font-medium">Processing notes ({processedEvents}/{eventsToProcess})...</p>
 		</div>
 	</div>
 {/if}

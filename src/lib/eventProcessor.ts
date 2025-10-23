@@ -1,4 +1,5 @@
 // TypeScript interfaces for data structures
+import { browser } from '$app/environment';
 import type { Feature as GeoJSONFeature, Geometry } from 'geojson';
 import { decodeGeoHash } from './geohash';
 
@@ -51,8 +52,10 @@ type SingleProperties = {
 };
 
 // Abstract EventProcessor base class
-abstract class EventProcessor {
-	constructor(protected ndk: any) {}
+abstract class IEventProcessor {
+	constructor() {}
+
+	abstract processWorker(event: any): Promise<any>;
 
 	abstract process(event: any): Promise<GeoJSONFeature<Geometry, SingleProperties> | null>;
 
@@ -94,8 +97,52 @@ abstract class EventProcessor {
 	}
 }
 
+// Concrete DefaultProcessor class
+class DefaultProcessor extends IEventProcessor {
+	async processWorker(event: any): Promise<any> {}
+
+	async process(event: any): Promise<GeoJSONFeature<Geometry, SingleProperties> | null> {
+		if (!this.validateEvent(event)) {
+			throw new Error('Invalid event structure');
+		}
+
+		const coordinates = this.extractLocation(event);
+		if (!coordinates) return null;
+
+		let username: string | null = null;
+		let { content, created_at: time, rating } = event;
+
+		const match = content.match(/^hitchmap\.com\s*(.*?):\s*/);
+		if (match) {
+			username = match[1]?.trim() || null;
+			content = content.slice(match[0].length);
+		}
+		content = content.replace(/\s*#hitchhiking\s*$/i, '').trim();
+
+		return {
+			type: 'Feature',
+			geometry: {
+				type: 'Point',
+				coordinates: coordinates.lngLat
+			},
+			properties: {
+				id: event.id,
+				pubkey: event.pubkey,
+				user: null, //profile,
+				time,
+				username: username || undefined,
+				content,
+				geohash: coordinates.geohash || undefined,
+				coordinates: coordinates.lngLat,
+				tags: event.tags,
+				rating
+			}
+		};
+	}
+}
+
 // Concrete Kind36820Processor class
-class Kind36820Processor extends EventProcessor {
+class Kind36820Processor extends DefaultProcessor {
 	async process(event: any): Promise<GeoJSONFeature<Geometry, SingleProperties> | null> {
 		if (!this.validateEvent(event)) {
 			throw new Error('Invalid event structure');
@@ -121,10 +168,6 @@ class Kind36820Processor extends EventProcessor {
 			return null;
 		}
 
-		const user = await this.ndk.fetchUser(event.pubkey);
-		const userProfile = await user?.fetchProfile();
-		const { profileEvent, ...profile } = userProfile ?? {};
-
 		return {
 			type: 'Feature',
 			geometry: {
@@ -134,7 +177,7 @@ class Kind36820Processor extends EventProcessor {
 			properties: {
 				id: event.id,
 				pubkey: event.pubkey,
-				user: profile,
+				user: null, //profile,
 				time,
 				username: username || undefined,
 				content,
@@ -147,76 +190,131 @@ class Kind36820Processor extends EventProcessor {
 	}
 }
 
-// Concrete DefaultProcessor class
-class DefaultProcessor extends EventProcessor {
-	async process(event: any): Promise<GeoJSONFeature<Geometry, SingleProperties> | null> {
-		if (!this.validateEvent(event)) {
-			throw new Error('Invalid event structure');
-		}
-
-		const coordinates = this.extractLocation(event);
-		if (!coordinates) return null;
-
-		let username: string | null = null;
-		let { content, created_at: time, rating } = event;
-
-		const match = content.match(/^hitchmap\.com\s*(.*?):\s*/);
-		if (match) {
-			username = match[1]?.trim() || null;
-			content = content.slice(match[0].length);
-		}
-		content = content.replace(/\s*#hitchhiking\s*$/i, '').trim();
-
-		const user = await this.ndk.fetchUser(event.pubkey);
-		const userProfile = await user?.fetchProfile();
-		const { profileEvent, ...profile } = userProfile ?? {};
-
-		return {
-			type: 'Feature',
-			geometry: {
-				type: 'Point',
-				coordinates: coordinates.lngLat
-			},
-			properties: {
-				id: event.id,
-				pubkey: event.pubkey,
-				user: profile,
-				time,
-				username: username || undefined,
-				content,
-				geohash: coordinates.geohash || undefined,
-				coordinates: coordinates.lngLat,
-				tags: event.tags,
-				rating
-			}
-		};
-	}
-}
-
 // EventProcessorFactory class
 class EventProcessorFactory {
-	private static processors: Map<number, new (ndk: any) => EventProcessor> = new Map();
+	private static processors: Map<number, new () => IEventProcessor> = new Map();
 
-	static register(kind: number, processorClass: new (ndk: any) => EventProcessor): void {
+	static register(kind: number, processorClass: new () => IEventProcessor): void {
 		this.processors.set(kind, processorClass);
 	}
 
-	static createProcessor(event: any, ndk: any): EventProcessor {
+	static createProcessor(event: any): IEventProcessor {
 		const ProcessorClass = this.processors.get(event.kind);
 		if (ProcessorClass) {
-			return new ProcessorClass(ndk);
+			return new ProcessorClass();
 		}
-		return new DefaultProcessor(ndk);
+		return new DefaultProcessor();
 	}
 }
 
 // Register processors
 EventProcessorFactory.register(36820, Kind36820Processor);
 
+class EventProcessorWorkerManager {
+	private workers: Worker[] = [];
+	private nextWorkerIndex = 0;
+	private pendingPromises: Map<string, Promise<any>> = new Map();
+
+	constructor(workerCount: number = navigator.hardwareConcurrency || 4) {
+		if (!browser || !window.Worker) {
+			console.warn('Web Workers are not supported in this environment.');
+			return;
+		}
+
+		for (let i = 0; i < workerCount; i++) {
+			this.workers.push(
+				new Worker(new URL('./eventProcessor.worker.ts', import.meta.url), {
+					type: 'module'
+				})
+			);
+		}
+	}
+
+	private getNextWorker(): Worker | undefined {
+		if (this.workers.length === 0) return undefined;
+		const worker = this.workers[this.nextWorkerIndex];
+		this.nextWorkerIndex = (this.nextWorkerIndex + 1) % this.workers.length;
+		return worker;
+	}
+
+	processWithWorker(event: any): Promise<any> {
+		const worker = this.getNextWorker();
+
+		if (!worker || !window.Worker) {
+			if (!window.Worker) {
+				console.warn('Web Workers are not supported in this environment.');
+			} else {
+				console.warn('No available workers to process the event.');
+			}
+
+			// Fallback to direct processing if no worker is available
+			const processor = EventProcessorFactory.createProcessor(event);
+			return processor.process(event);
+		}
+
+		// Use a unique requestId to map responses to requests
+		const requestId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+		if (!(worker as any)._listeners) {
+			(worker as any)._listeners = new Map<string, { resolve: Function; reject: Function }>();
+		}
+		const listeners: Map<string, { resolve: Function; reject: Function }> = (worker as any)
+			._listeners;
+
+		const handleMessage = (e: MessageEvent) => {
+			const data = e.data;
+			if (typeof data !== 'object' || !data.requestId) return;
+			const listener = listeners.get(data.requestId);
+			if (listener) {
+				listener.resolve(data.feature);
+				listeners.delete(data.requestId);
+				this.pendingPromises.delete(data.requestId);
+			}
+		};
+
+		const handleError = (err: ErrorEvent) => {
+			console.log('Worker error:', err, requestId);
+			const listener = listeners.get(requestId);
+			if (listener) {
+				listener.reject(err);
+				listeners.delete(requestId);
+				this.pendingPromises.delete(requestId);
+			}
+		};
+
+		// Attach the message handler only once per worker
+		if (!(worker as any)._hasGlobalListener) {
+			worker.addEventListener('message', handleMessage);
+			worker.addEventListener('error', handleError);
+			(worker as any)._hasGlobalListener = true;
+		}
+
+		const promise = new Promise((resolve, reject) => {
+			listeners.set(requestId, { resolve, reject });
+
+			worker.postMessage({
+				requestId,
+				event: {
+					tags: event.tags,
+					kind: event.kind,
+					content: event.content,
+					created_at: event.created_at,
+					id: event.id,
+					pubkey: event.pubkey
+				}
+			});
+		});
+
+		this.pendingPromises.set(requestId, promise);
+
+		return promise;
+	}
+}
+
 export {
 	DefaultProcessor,
-	EventProcessor,
 	EventProcessorFactory,
+	EventProcessorWorkerManager,
+	IEventProcessor,
 	Kind36820Processor,
 	type LocationData,
 	type ProcessedContent,
