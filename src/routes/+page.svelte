@@ -58,9 +58,12 @@
 	}
 
 	const workerManager = new EventProcessorWorkerManager();
+	const INITIAL_NOTE_COUNT = 1000; /** @todo Maybe make an environment variable. */
 	let eventsToProcess = $state(0);
 	let processedEvents = $state(0);
-	let processedEventsList: any[] = $state([]);
+	let initialBatchCount = 0;
+
+	let backgroundWorker: Worker | null = null;
 
 	const processEvent = async (event: any) => {
 		eventsToProcess++;
@@ -69,23 +72,48 @@
 		processedEvents++;
 
 		if (processedEvent) {
-			processedEventsList.push(processedEvent);
-		}
-
-		if (processedEvents === eventsToProcess) {
 			notesOnMap = {
 				...notesOnMap,
-				features: processedEventsList
+				features: [...notesOnMap.features, processedEvent]
 			};
+			initialBatchCount++;
 
-			isLoadingNotes = false;
+			if (initialBatchCount === INITIAL_NOTE_COUNT) {
+				isLoadingNotes = false;
+			}
 		}
 	};
+
+	$effect(() => {
+		if (!isLoadingNotes && !backgroundWorker) {
+			console.log('Starting background note loading worker in 10 seconds...');
+
+			setTimeout(() => {
+				backgroundWorker = new Worker(new URL('$lib/noteLoader.worker.ts', import.meta.url), {
+					type: 'module'
+				});
+
+				backgroundWorker.onmessage = async (event) => {
+					const { type, events } = event.data;
+					if (type === 'batch') {
+						console.log(`Background worker sent batch of ${events.length} events.`);
+						for (const rawEvent of events) {
+							await processEvent(rawEvent);
+						}
+					} else if (type === 'done') {
+						console.log('Background note loading completed');
+						backgroundWorker?.terminate();
+						backgroundWorker = null;
+					}
+				};
+			}, 10000);
+		}
+	});
 
 	onMount(async () => {
 		const sub = ndk.subscribe(
 			{
-				limit: 5000 /** @todo Maybe make an environment variable. */,
+				limit: INITIAL_NOTE_COUNT,
 				kinds: [1, 36820] as any[],
 				'#t': ['hitchmap']
 				// This will result in too few results.
@@ -101,7 +129,7 @@
 						processEvent(event);
 					}
 				},
-				onEvent: (event, relay) => {
+				onEvent: (event) => {
 					processEvent(event);
 				}
 			}
