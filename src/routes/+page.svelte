@@ -30,6 +30,7 @@
 	let map: maplibregl.Map | undefined = $state();
 
 	let isLoadingNotes = $state(true);
+	let isLoadingInBackground = $state(false);
 
 	const getRelayStatus = $derived.by(() => {
 		const statusMap = new Map<string, string>();
@@ -64,9 +65,12 @@
 	let initialBatchCount = 0;
 
 	let backgroundWorker: Worker | null = null;
+	let hasBackgroundWorkerFinished = $state(false);
 
-	const processEvent = async (event: any) => {
-		eventsToProcess++;
+	let collectedBackgroundEvents = $state([] as any[]);
+
+	const processEvent = async (event: any, opts: { background?: boolean } = {}) => {
+		if (!opts.background) eventsToProcess++;
 
 		const processedEvent = await workerManager.processWithWorker(event);
 		processedEvents++;
@@ -87,11 +91,22 @@
 		}
 	};
 
+	const BACKGROUND_WORKER_DELAY_MS = 1000;
+
 	$effect(() => {
-		if (!isLoadingNotes && !backgroundWorker) {
-			console.log('Starting background note loading worker in 10 seconds...');
+		if (
+			!localStorage.getItem('initialLoadDone') &&
+			!isLoadingNotes &&
+			!backgroundWorker &&
+			!hasBackgroundWorkerFinished
+		) {
+			console.log(
+				`Starting background note loading worker in ${BACKGROUND_WORKER_DELAY_MS / 1000} seconds...`
+			);
 
 			setTimeout(() => {
+				isLoadingInBackground = true;
+
 				backgroundWorker = new Worker(new URL('$lib/noteLoader.worker.ts', import.meta.url), {
 					type: 'module'
 				});
@@ -100,16 +115,25 @@
 					const { type, events } = event.data;
 					if (type === 'batch') {
 						console.log(`Background worker sent batch of ${events.length} events.`);
-						for (const rawEvent of events) {
-							await processEvent(rawEvent);
-						}
+						collectedBackgroundEvents.push(...events);
 					} else if (type === 'done') {
+						processedEvents = 0;
+						eventsToProcess = collectedBackgroundEvents.length;
+						isLoadingNotes = true;
 						console.log('Background note loading completed');
+						for (const rawEvent of $state.snapshot(collectedBackgroundEvents)) {
+							await processEvent(rawEvent, { background: true });
+						}
+						collectedBackgroundEvents = [];
 						backgroundWorker?.terminate();
 						backgroundWorker = null;
+						hasBackgroundWorkerFinished = true;
+						isLoadingInBackground = false;
+						isLoadingNotes = false;
+						localStorage.setItem('initialLoadDone', 'true');
 					}
 				};
-			}, 10000);
+			}, BACKGROUND_WORKER_DELAY_MS);
 		}
 	});
 
@@ -146,7 +170,7 @@
 
 <div class="absolute top-0 right-0 z-10 flex max-h-full w-1/3 flex-col gap-2 overflow-y-scroll p-4">
 	<div
-		class="bg-opacity-90 flex shrink-0 flex-row gap-2 overflow-x-scroll rounded bg-white p-4 text-xs shadow-md"
+		class="flex shrink-0 flex-row gap-2 overflow-x-scroll rounded bg-white p-4 text-xs shadow-md"
 	>
 		{#each availableRelays as relay (relay)}
 			{@const status = getRelayStatus.get(relay)}
@@ -166,6 +190,20 @@
 			</div>
 		{/each}
 	</div>
+
+	{#if isLoadingInBackground}
+		<div
+			class="flex shrink-0 flex-row items-center gap-2 overflow-x-scroll rounded bg-gray-950 p-4 text-xs text-white shadow-md"
+		>
+			<span class="size-2 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600"
+			></span>
+			<span
+				>Loading more notes... {@html collectedBackgroundEvents.length > 0
+					? `<span class="opacity-50">${collectedBackgroundEvents.length}...</span>`
+					: ''}</span
+			>
+		</div>
+	{/if}
 
 	{#snippet note(entry: {
 		pubkey?: string;
