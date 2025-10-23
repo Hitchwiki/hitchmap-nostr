@@ -72,9 +72,20 @@
 		processedEvents++;
 
 		if (processedEvent) {
+			// Deduplicate features by properties.id
+			const newFeatures = [...notesOnMap.features, processedEvent];
+			const seen = new Set();
+			const deduped = [];
+			for (let i = newFeatures.length - 1; i >= 0; i--) {
+				const id = newFeatures[i]?.properties?.id;
+				if (id && !seen.has(id)) {
+					seen.add(id);
+					deduped.unshift(newFeatures[i]);
+				}
+			}
 			notesOnMap = {
 				...notesOnMap,
-				features: [...notesOnMap.features, processedEvent]
+				features: deduped
 			};
 			initialBatchCount++;
 
