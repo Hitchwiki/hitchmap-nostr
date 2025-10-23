@@ -136,6 +136,8 @@
 	let profileModalOpen = $state(false);
 	let selectedUserProfile: any = $state(null);
 
+	const BATCH_SIZE = 2500;
+
 	$effect(() => {
 		if (eventBuffer.length === 0) return;
 		if (debounceTimeout) return; // Do not clear or reschedule if already pending
@@ -143,13 +145,15 @@
 		console.log(`Scheduling processing of ${eventBuffer.length} new notes (debounced).`);
 
 		debounceTimeout = setTimeout(() => {
-			const bufferSnapshot = eventBuffer.slice();
-			console.log(`Processing buffer of ${bufferSnapshot.length} new notes (debounced).`);
+			const bufferSnapshot = eventBuffer.slice(0, BATCH_SIZE);
+			console.log(
+				`Processing buffer of ${bufferSnapshot.length} new notes (debounced, max ${BATCH_SIZE} at a time).`
+			);
 			notesOnMap = {
 				...notesOnMap,
 				features: [...notesOnMap.features, ...bufferSnapshot]
 			};
-			eventBuffer = [];
+			eventBuffer = eventBuffer.slice(bufferSnapshot.length);
 			debounceTimeout = null;
 		}, 1000); // process every 1 second
 	});
@@ -220,7 +224,7 @@
 	</div>
 
 	<div class="bg-opacity-90 rounded bg-white p-4 text-sm shadow-md">
-		{notesOnMap.features.length} notes loaded
+		{notesOnMap.features.length} notes loaded (still loading: {eventBuffer.length})
 	</div>
 
 	{#snippet note(entry: {
