@@ -9,6 +9,7 @@ let cacheAdapter: NDKCacheAdapter | undefined = $state(undefined);
 if (browser) {
 	cacheAdapter = new NDKCacheAdapterSqliteWasm({
 		dbName: 'hitchmap-ndk',
+		useWorker: true,
 		workerUrl: '/wasm/worker.js',
 		wasmUrl: '/wasm/sql-wasm.wasm'
 	}) as any;
