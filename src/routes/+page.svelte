@@ -385,12 +385,9 @@
 			applyToClusters
 			layout={{
 				'text-font': ['Noto Sans Regular'], // Needs to match available fonts in map style
-				'text-field': [
-					'format',
-					['get', 'point_count_abbreviated'],
-				],
+				'text-field': ['format', ['get', 'point_count_abbreviated']],
 				'text-size': 12,
-				'text-offset': [0, -0.1],
+				'text-offset': [0, -0.1]
 			}}
 			paint={{
 				'text-color': '#ffffff'
