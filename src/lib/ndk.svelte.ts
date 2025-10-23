@@ -17,7 +17,7 @@ const DEFAULT_RELAYS = [
 	// 'wss://relay.damus.io',
 	// 'wss://relay.nostr.band',
 	// 'wss://f7z.io',
-	'wss://nos.lol',
+	// 'wss://nos.lol',
 	// 'wss://nostr.wine'
 ];
 
