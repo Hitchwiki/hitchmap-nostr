@@ -118,18 +118,20 @@
 
 	$effect(() => {
 		if (eventBuffer.length === 0) return;
+		if (debounceTimeout) return; // Do not clear or reschedule if already pending
 
-		if (debounceTimeout) clearTimeout(debounceTimeout);
+		console.log(`Scheduling processing of ${eventBuffer.length} new notes (debounced).`);
 
 		debounceTimeout = setTimeout(() => {
-			console.log(`Processing buffer of ${eventBuffer.length} new notes (debounced).`);
+			const bufferSnapshot = eventBuffer.slice();
+			console.log(`Processing buffer of ${bufferSnapshot.length} new notes (debounced).`);
 			notesOnMap = {
 				...notesOnMap,
-				features: [...notesOnMap.features, ...eventBuffer]
+				features: [...notesOnMap.features, ...bufferSnapshot]
 			};
 			eventBuffer = [];
 			debounceTimeout = null;
-		}, 500); // adjust debounce delay as needed
+		}, 1000); // process every 1 second
 	});
 
 	function openProfileModal(userProfile: any) {
@@ -147,8 +149,11 @@
 	onMount(async () => {
 		const sub = ndk.subscribe(
 			{
+				limit: 500,
 				kinds: [1, 36820] as any[],
-				'#g': [...'0123456789bcdefghjkmnpqrstuvwxyz']
+				'#t': ['hitchmap']
+				// This will result in too few results.
+				// '#g': [...'0123456789bcdefghjkmnpqrstuvwxyz']
 			},
 			{ closeOnEose: false, cacheUnconstrainFilter: ['limit'] },
 			{
@@ -165,8 +170,7 @@
 		);
 
 		sub.on('eose', (relay: any) => {
-			console.log(`Received EOSE from ${relay.url}`, relay);
-			console.log('Finished loading notes from first relay – listening...');
+			console.log('Finished loading notes – listening...');
 			isLoadingNotes = false;
 		});
 	});
