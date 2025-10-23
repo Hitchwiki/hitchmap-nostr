@@ -169,7 +169,7 @@
 	onMount(async () => {
 		const sub = ndk.subscribe(
 			{
-				limit: 500,
+				limit: 10000,
 				kinds: [1, 36820] as any[],
 				'#t': ['hitchmap']
 				// This will result in too few results.
