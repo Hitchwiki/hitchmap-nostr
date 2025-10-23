@@ -213,7 +213,9 @@ class EventProcessorWorkerManager {
 	private nextWorkerIndex = 0;
 	private pendingPromises: Map<string, Promise<any>> = new Map();
 
-	constructor(workerCount: number = navigator.hardwareConcurrency || 4) {
+	// Initialize workers based on hardware concurrency
+	// Reserve a few for cache and other things.
+	constructor(workerCount: number = (navigator.hardwareConcurrency - 5) || 4) {
 		if (typeof window === 'undefined' || !window.Worker) {
 			console.warn('Web Workers are not supported in this environment.');
 			return;
