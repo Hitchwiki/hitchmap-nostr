@@ -147,7 +147,8 @@
 	onMount(async () => {
 		const sub = ndk.subscribe(
 			{
-				kinds: [1, 36820] as any[]
+				kinds: [1, 36820] as any[],
+				'#g': [...'0123456789bcdefghjkmnpqrstuvwxyz']
 			},
 			{ closeOnEose: false, cacheUnconstrainFilter: ['limit'] },
 			{
