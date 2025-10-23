@@ -1,6 +1,6 @@
 <script lang="ts">
 	import UserProfileModal from '$lib/components/UserProfileModal.svelte';
-	import { decodeGeoHash } from '$lib/geohash';
+	import { EventProcessorFactory } from '$lib/eventProcessor';
 	import { availableRelays, ndk } from '$lib/ndk.svelte';
 	import type { Feature, Geometry } from 'geojson';
 	import { type GeoJSONSource } from 'maplibre-gl';
@@ -46,87 +46,6 @@
 		features: [] as any[]
 	});
 
-	function extractLocation(note: any) {
-		const gTags = note.tags.filter((tag: any) => tag[0] === 'g' && tag[1]);
-		const longestGTag = gTags.reduce(
-			(longest: string, tag: any) => (tag[1].length > (longest?.length ?? 0) ? tag[1] : longest),
-			''
-		);
-
-		// Check if longestGTag is in "lat,lng" format
-		const latLngMatch = longestGTag.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
-		if (latLngMatch) {
-			const lat = parseFloat(latLngMatch[1]);
-			const lng = parseFloat(latLngMatch[3]);
-			if (isFinite(lat) && isFinite(lng)) {
-				return { lngLat: [lng, lat], geohash: null };
-			}
-			return null;
-		}
-
-		const location = decodeGeoHash(longestGTag);
-		if (!location) return null;
-		return { lngLat: [location.longitude[2], location.latitude[2]], geohash: longestGTag };
-	}
-
-	async function eventToFeature(note: any) {
-		const coordinates = extractLocation(note);
-		if (!coordinates) return null;
-
-		let username: string | null = null;
-		let content = note.content;
-		let time = note.created_at;
-		let rating = note.rating;
-
-		if (note.kind === 36820) {
-			try {
-				const data = JSON.parse(content);
-
-				username = data?.hitchhikers?.[0]?.nickname ?? null;
-				content = data.comment || content;
-				if (data.submission_time) {
-					const date = new Date(data.submission_time);
-					if (!isNaN(date.getTime())) time = Math.floor(date.getTime() / 1000);
-				}
-				if (typeof data.rating !== 'undefined') rating = data.rating;
-			} catch (error) {
-				console.error('Failed to parse JSON for kind 36820 event:', error);
-				return null;
-			}
-		} else {
-			const match = content.match(/^hitchmap\.com\s*(.*?):\s*/);
-			if (match) {
-				username = match[1]?.trim() || null;
-				content = content.slice(match[0].length);
-			}
-			content = content.replace(/\s*#hitchhiking\s*$/i, '').trim();
-		}
-
-		const user = await ndk.fetchUser(note.pubkey);
-		const userProfile = await user?.fetchProfile();
-		const { profileEvent, ...profile } = userProfile ?? {};
-
-		return {
-			type: 'Feature',
-			geometry: {
-				type: 'Point',
-				coordinates: coordinates.lngLat
-			},
-			properties: {
-				id: note.id,
-				pubkey: note.pubkey,
-				user: profile,
-				time,
-				username,
-				content,
-				geohash: coordinates.geohash,
-				coordinates: coordinates.lngLat,
-				tags: note.tags,
-				rating
-			}
-		};
-	}
-
 	let clickedFeature: any | null | undefined = $state();
 
 	let eventBuffer: any[] = $state([]);
@@ -164,7 +83,8 @@
 	}
 
 	const processEvent = async (event: any) => {
-		const feature = await eventToFeature(event);
+		const processor = EventProcessorFactory.createProcessor(event, ndk);
+		const feature = await processor.process(event);
 		if (feature) {
 			eventBuffer.push(feature);
 		}
@@ -173,7 +93,7 @@
 	onMount(async () => {
 		const sub = ndk.subscribe(
 			{
-				limit: 10000,
+				limit: 1000 /** @todo Maybe make an environment variable. */,
 				kinds: [1, 36820] as any[],
 				'#t': ['hitchmap']
 				// This will result in too few results.
@@ -187,7 +107,12 @@
 						processEvent(event);
 					}
 				},
-				onEvent: (event) => {
+				onEvent: (event, relay) => {
+					if (!relay) {
+						console.log('Received event from cache');
+					} else {
+						console.log('Received event from relay', relay.url);
+					}
 					processEvent(event);
 				}
 			}
