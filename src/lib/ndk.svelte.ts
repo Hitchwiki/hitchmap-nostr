@@ -4,14 +4,16 @@ import type { NDKCacheAdapter } from '@nostr-dev-kit/ndk';
 import { NDKSvelte } from '@nostr-dev-kit/svelte';
 import { SvelteSet } from 'svelte/reactivity';
 
+const BASE_PATH = import.meta.env.DEV ? '/' : '/hitchmap-nostr/';
+
 let cacheAdapter: NDKCacheAdapter | undefined = $state(undefined);
 
 if (browser) {
 	cacheAdapter = new NDKCacheAdapterSqliteWasm({
 		dbName: 'hitchmap-ndk',
 		useWorker: true,
-		workerUrl: '/wasm/worker.js',
-		wasmUrl: '/wasm/sql-wasm.wasm'
+		workerUrl: `${BASE_PATH}wasm/worker.js`,
+		wasmUrl: `${BASE_PATH}wasm/sql-wasm.wasm`
 	}) as any;
 }
 
