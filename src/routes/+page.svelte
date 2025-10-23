@@ -2,9 +2,29 @@
 	import UserProfileModal from '$lib/components/UserProfileModal.svelte';
 	import { decodeGeoHash } from '$lib/geohash';
 	import { availableRelays, ndk } from '$lib/ndk.svelte';
+	import type { Feature, Geometry } from 'geojson';
 	import { type GeoJSONSource } from 'maplibre-gl';
 	import { onMount } from 'svelte';
-	import { GeoJSON, MapLibre, MarkerLayer } from 'svelte-maplibre';
+	import {
+		CircleLayer,
+		GeoJSON,
+		type LayerClickInfo,
+		MapLibre,
+		SymbolLayer
+	} from 'svelte-maplibre';
+
+	type SingleProperties = {
+		id: string;
+		pubkey: string;
+		user: any;
+		time: number;
+		username?: string;
+		content: string;
+		geohash?: string;
+		coordinates: [number, number];
+		tags: any[];
+		rating?: number;
+	};
 
 	let map: maplibregl.Map | undefined = $state();
 
@@ -176,9 +196,9 @@
 	});
 </script>
 
-<div class="absolute right-0 top-0 z-10 flex max-h-full w-1/3 flex-col gap-2 overflow-y-scroll p-4">
+<div class="absolute top-0 right-0 z-10 flex max-h-full w-1/3 flex-col gap-2 overflow-y-scroll p-4">
 	<div
-		class="flex shrink-0 flex-row gap-2 overflow-x-scroll rounded bg-white bg-opacity-90 p-4 text-xs shadow-md"
+		class="bg-opacity-90 flex shrink-0 flex-row gap-2 overflow-x-scroll rounded bg-white p-4 text-xs shadow-md"
 	>
 		{#each availableRelays as relay (relay)}
 			{@const status = getRelayStatus.get(relay)}
@@ -199,7 +219,7 @@
 		{/each}
 	</div>
 
-	<div class="rounded bg-white bg-opacity-90 p-4 text-sm shadow-md">
+	<div class="bg-opacity-90 rounded bg-white p-4 text-sm shadow-md">
 		{notesOnMap.features.length} notes loaded
 	</div>
 
@@ -230,13 +250,13 @@
 			{/if}
 			<details>
 				<summary class="cursor-pointer text-xs text-gray-400">Show raw data</summary>
-				<pre class="whitespace-pre-wrap text-xs">{JSON.stringify(entry, null, 2)}</pre>
+				<pre class="text-xs whitespace-pre-wrap">{JSON.stringify(entry, null, 2)}</pre>
 			</details>
 		</div>
 	{/snippet}
 
 	{#if clickedFeature}
-		<div class="max-h-1/3 overflow-y-auto rounded bg-white bg-opacity-90 p-4 text-sm shadow-md">
+		<div class="bg-opacity-90 max-h-1/3 overflow-y-auto rounded bg-white p-4 text-sm shadow-md">
 			{#if clickedFeature.cluster}
 				<h2 class="mb-2 font-bold">Cluster ({clickedFeature.point_count} points)</h2>
 				{#await (async () => {
@@ -270,7 +290,7 @@
 						{/each}
 					</div>
 					{#if children.length < clickedFeature.point_count}
-						<p class="italic text-gray-600">
+						<p class="text-gray-600 italic">
 							...{clickedFeature.point_count - children.length} more point{clickedFeature.point_count -
 								children.length ===
 							1
@@ -296,6 +316,17 @@
 
 <UserProfileModal bind:open={profileModalOpen} user={selectedUserProfile} />
 
+{#if isLoadingNotes}
+	<div class="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
+		<div class="flex flex-col items-center gap-4 rounded-lg bg-white p-6 shadow-lg">
+			<div
+				class="size-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"
+			></div>
+			<p class="text-lg font-medium">Loading notes...</p>
+		</div>
+	</div>
+{/if}
+
 <MapLibre
 	bind:map
 	center={[50, 20]}
@@ -305,16 +336,6 @@
 	onclick={() => (clickedFeature = null)}
 	projection={{ type: 'globe' }}
 >
-	{#if isLoadingNotes}
-		<div class="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
-			<div class="flex flex-col items-center gap-4 rounded-lg bg-white p-6 shadow-lg">
-				<div
-					class="size-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"
-				></div>
-				<p class="text-lg font-medium">Loading notes...</p>
-			</div>
-		</div>
-	{/if}
 	<GeoJSON
 		id="notes"
 		data={notesOnMap}
@@ -326,31 +347,63 @@
 			}
 		}}
 	>
-		<MarkerLayer applyToClusters asButton onclick={(e) => (clickedFeature = e.feature?.properties)}>
-			{#snippet children({ feature }: { feature: GeoJSON.Feature<GeoJSON.Point, any> })}
-				<div
-					class="flex size-8 items-center justify-center rounded-full text-xs text-white"
-					style="background-color: {feature.properties.point_count >= 50
-						? '#ef4444'
-						: feature.properties.point_count >= 10
-							? '#facc15'
-							: '#16a34a'};"
-				>
-					{feature.properties.point_count}
-				</div>
-			{/snippet}
-		</MarkerLayer>
+		<CircleLayer
+			id="cluster_circles"
+			applyToClusters
+			onclick={(e: LayerClickInfo<Feature<Geometry, any>>) =>
+				(clickedFeature = e.features?.[0]?.properties)}
+			hoverCursor="pointer"
+			manageHoverState
+			paint={{
+				'circle-color': [
+					'step',
+					['get', 'point_count'],
+					'#176a3c', // green for <50
+					50,
+					'#ff9800', // orange for 50-300
+					300,
+					'#9c2f2f' // red for >=300
+				],
+				'circle-radius': [
+					'step',
+					['get', 'point_count'],
+					20, // small radius for small clusters
+					100,
+					30, // medium radius for medium clusters
+					750,
+					40 // large radius for large clusters
+				]
+			}}
+		/>
 
-		<MarkerLayer
+		<SymbolLayer
+			interactive={false}
+			applyToClusters
+			layout={{
+				'text-font': ['Noto Sans Regular'], // Needs to match available fonts in map style
+				'text-field': [
+					'format',
+					['get', 'point_count_abbreviated'],
+				],
+				'text-size': 12,
+				'text-offset': [0, -0.1],
+			}}
+			paint={{
+				'text-color': '#ffffff'
+			}}
+		/>
+
+		<CircleLayer
 			applyToClusters={false}
-			asButton
-			onclick={(e) => (clickedFeature = e.feature?.properties)}
-		>
-			{#snippet children({ feature }: { feature: GeoJSON.Feature<GeoJSON.Point, any> })}
-				<div
-					class="flex size-4 items-center justify-center rounded-full bg-green-800 text-sm font-bold text-white"
-				></div>
-			{/snippet}
-		</MarkerLayer>
+			onclick={(e: LayerClickInfo<Feature<Geometry, SingleProperties>>) =>
+				(clickedFeature = e.features?.[0]?.properties)}
+			hoverCursor="pointer"
+			paint={{
+				'circle-color': '#11b4da',
+				'circle-radius': 4,
+				'circle-stroke-width': 1,
+				'circle-stroke-color': '#fff'
+			}}
+		/>
 	</GeoJSON>
 </MapLibre>
