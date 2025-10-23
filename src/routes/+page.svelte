@@ -71,21 +71,13 @@
 		const processedEvent = await workerManager.processWithWorker(event);
 		processedEvents++;
 
-		if (processedEvent) {
-			// Deduplicate features by properties.id
-			const newFeatures = [...notesOnMap.features, processedEvent];
-			const seen = new Set();
-			const deduped = [];
-			for (let i = newFeatures.length - 1; i >= 0; i--) {
-				const id = newFeatures[i]?.properties?.id;
-				if (id && !seen.has(id)) {
-					seen.add(id);
-					deduped.unshift(newFeatures[i]);
-				}
-			}
+		if (
+			processedEvent &&
+			!notesOnMap.features.some((f: any) => f.properties?.id === processedEvent.properties?.id)
+		) {
 			notesOnMap = {
 				...notesOnMap,
-				features: deduped
+				features: [...notesOnMap.features, processedEvent]
 			};
 			initialBatchCount++;
 
