@@ -1,25 +1,20 @@
 import { browser } from '$app/environment';
+import NDKCacheAdapterSqliteWasm from '@nostr-dev-kit/cache-sqlite-wasm';
 import type { NDKCacheAdapter } from '@nostr-dev-kit/ndk';
-import NDKCacheAdapterDexie from '@nostr-dev-kit/ndk-cache-dexie';
 import { NDKSvelte } from '@nostr-dev-kit/svelte';
 import { SvelteSet } from 'svelte/reactivity';
 
 let cacheAdapter: NDKCacheAdapter | undefined = $state(undefined);
 
 if (browser) {
-	console.log('Initializing NDK Dexie Cache Adapter');
-	cacheAdapter = new NDKCacheAdapterDexie({ dbName: 'lightfoot' }) as any;
+	cacheAdapter = new NDKCacheAdapterSqliteWasm({
+		dbName: 'hitchmap-ndk',
+		workerUrl: '/wasm/worker.js',
+		wasmUrl: '/wasm/sql-wasm.wasm'
+	}) as any;
 }
 
-const DEFAULT_RELAYS = [
-	'wss://relay.nomadwiki.org',
-	'wss://relay.trustroots.org',
-	// 'wss://relay.damus.io',
-	// 'wss://relay.nostr.band',
-	// 'wss://f7z.io',
-	// 'wss://nos.lol',
-	// 'wss://nostr.wine'
-];
+const DEFAULT_RELAYS = ['wss://relay.nomadwiki.org', 'wss://relay.trustroots.org'];
 
 let selectedRelayUrls = new SvelteSet(DEFAULT_RELAYS);
 export const availableRelays = DEFAULT_RELAYS;
@@ -30,4 +25,13 @@ export const ndk = new NDKSvelte({
 	cacheAdapter
 });
 
-ndk.connect().then(() => console.log('NDK Connected'));
+(async () => {
+	if (!browser) return;
+
+	if (cacheAdapter) {
+		console.log('Initializing NDK Sqlite WASM Cache Adapter');
+		await cacheAdapter?.initialize?.(ndk);
+	}
+
+	ndk.connect().then(() => console.log('NDK Connected'));
+})();
