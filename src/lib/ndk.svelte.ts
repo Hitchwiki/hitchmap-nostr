@@ -1,4 +1,3 @@
-import { browser } from '$app/environment';
 import NDKCacheAdapterSqliteWasm from '@nostr-dev-kit/cache-sqlite-wasm';
 import type { NDKCacheAdapter } from '@nostr-dev-kit/ndk';
 import { NDKSvelte } from '@nostr-dev-kit/svelte';
@@ -8,7 +7,7 @@ const BASE_PATH = import.meta.env.DEV ? '/' : '/hitchmap-nostr/';
 
 let cacheAdapter: NDKCacheAdapter | undefined = $state(undefined);
 
-if (browser) {
+if (typeof window !== 'undefined') {
 	cacheAdapter = new NDKCacheAdapterSqliteWasm({
 		dbName: 'hitchmap-ndk',
 		useWorker: true,
@@ -29,7 +28,7 @@ export const ndk = new NDKSvelte({
 });
 
 (async () => {
-	if (!browser) return;
+	if (typeof window === 'undefined') return;
 
 	if (cacheAdapter) {
 		console.log('Initializing NDK Sqlite WASM Cache Adapter');
