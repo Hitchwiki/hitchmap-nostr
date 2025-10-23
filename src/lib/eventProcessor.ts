@@ -61,28 +61,20 @@ abstract class EventProcessor {
 		return event && typeof event === 'object' && 'kind' in event && 'content' in event;
 	}
 
-	// Shared method to extract basic data
-	protected extractBasicData(event: any): Partial<ProcessedData> {
-		return {
-			timestamp: event.created_at || Date.now(),
-			kind: event.kind,
-			user: {
-				id: event.pubkey || '',
-				name: 'Anonymous'
-			},
-			features: []
-		};
-	}
-
 	// Extract location from event tags
 	protected extractLocation(
 		event: any
 	): { lngLat: [number, number]; geohash: string | null } | null {
-		const gTags = event.tags.filter((tag: any) => tag[0] === 'g' && tag[1]);
-		const longestGTag = gTags.reduce(
-			(longest: string, tag: any) => (tag[1].length > (longest?.length ?? 0) ? tag[1] : longest),
-			''
-		);
+		if (!event?.tags?.length) return null;
+
+		const longestGTag = event.tags
+			.filter((tag: any) => tag[0] === 'g' && typeof tag[1] === 'string' && tag[1].length)
+			.reduce(
+				(longest: string, tag: any) => (tag[1].length > longest.length ? tag[1] : longest),
+				''
+			);
+
+		if (!longestGTag) return null;
 
 		// Check if longestGTag is in "lat,lng" format
 		const latLngMatch = longestGTag.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
@@ -113,13 +105,10 @@ class Kind36820Processor extends EventProcessor {
 		if (!coordinates) return null;
 
 		let username: string | null = null;
-		let content = event.content;
-		let time = event.created_at;
-		let rating = event.rating;
+		let { content, created_at: time, rating } = event;
 
 		try {
 			const data = JSON.parse(content);
-
 			username = data?.hitchhikers?.[0]?.nickname ?? null;
 			content = data.comment || content;
 			if (data.submission_time) {
@@ -191,7 +180,7 @@ class DefaultProcessor extends EventProcessor {
 			properties: {
 				id: event.id,
 				pubkey: event.pubkey,
-				user: null, //profile,
+				user: profile,
 				time,
 				username: username || undefined,
 				content,
@@ -225,14 +214,12 @@ class EventProcessorFactory {
 EventProcessorFactory.register(36820, Kind36820Processor);
 
 export {
-  DefaultProcessor,
-  EventProcessor,
-  EventProcessorFactory,
-  Kind36820Processor,
-  type Feature,
-  type LocationData,
-  type ProcessedContent,
-  type ProcessedData,
-  type UserProfile
+	DefaultProcessor,
+	EventProcessor,
+	EventProcessorFactory,
+	Kind36820Processor,
+	type LocationData,
+	type ProcessedContent,
+	type ProcessedData,
+	type UserProfile
 };
-
