@@ -1,5 +1,3 @@
-// TypeScript interfaces for data structures
-import { browser } from '$app/environment';
 import type { Feature as GeoJSONFeature, Geometry } from 'geojson';
 import { decodeGeoHash } from './geohash';
 
@@ -216,7 +214,7 @@ class EventProcessorWorkerManager {
 	private pendingPromises: Map<string, Promise<any>> = new Map();
 
 	constructor(workerCount: number = navigator.hardwareConcurrency || 4) {
-		if (!browser || !window.Worker) {
+		if (typeof window === 'undefined' || !window.Worker) {
 			console.warn('Web Workers are not supported in this environment.');
 			return;
 		}
