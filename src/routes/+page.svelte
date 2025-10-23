@@ -400,7 +400,22 @@
 				(clickedFeature = e.features?.[0]?.properties)}
 			hoverCursor="pointer"
 			paint={{
-				'circle-color': '#11b4da',
+				'circle-color': [
+					'case',
+					['has', 'rating'],
+					[
+						'interpolate',
+						['linear'],
+						['get', 'rating'],
+						1,
+						'#9c2f2f', // red for bad (rating 1)
+						3,
+						'#ff9800', // orange for medium (rating 3)
+						5,
+						'#2ecc40' // brighter green for good (rating 5)
+					],
+					'#11b4da' // default color if no rating
+				],
 				'circle-radius': 4,
 				'circle-stroke-width': 1,
 				'circle-stroke-color': '#fff'
