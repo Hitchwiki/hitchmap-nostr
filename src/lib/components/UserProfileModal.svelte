@@ -4,12 +4,22 @@
 
 	let {
 		user,
-		open = $bindable(false)
-	}: { user?: (NDKUserProfile & { pubkey: string }) | null; open: boolean } = $props();
+		open = $bindable(false),
+		isCurrentUser = false,
+		onUsernameChange = (newName: string) => {}
+	}: {
+		user?: (NDKUserProfile & { pubkey: string }) | null;
+		open: boolean;
+		isCurrentUser?: boolean;
+		onUsernameChange?: (newName: string) => void;
+	} = $props();
 
 	let closeBtn: HTMLButtonElement | undefined = $state();
+	let editingName = $state(false);
+	let newName = $state(String(user?.display_name || user?.name || ''));
 
-	function close() {
+	function close(e?: MouseEvent) {
+		if (editingName) return;
 		open = false;
 	}
 
@@ -17,6 +27,31 @@
 		if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
 			close();
+		}
+	}
+
+	function startEditName(e?: MouseEvent) {
+		e?.stopPropagation();
+		editingName = true;
+		newName = String(user?.display_name || user?.name || '');
+		setTimeout(() => {
+			const input = document.getElementById('edit-username-input') as HTMLInputElement;
+			input?.focus();
+		}, 0);
+	}
+
+	function saveName() {
+		if (newName.trim() && newName !== (user?.display_name || user?.name)) {
+			onUsernameChange(newName.trim());
+		}
+		editingName = false;
+	}
+
+	function handleNameInputKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			saveName();
+		} else if (e.key === 'Escape') {
+			editingName = false;
 		}
 	}
 
@@ -57,8 +92,27 @@
 						class="h-15 w-15 rounded-full border-2 border-gray-300 object-cover"
 					/>
 				{/if}
-				<h2 id="modal-title" class="m-0 text-xl font-semibold">
-					{user.display_name || user.name || 'User'}
+				<h2 id="modal-title" class="m-0 flex items-center gap-2 text-xl font-semibold">
+					{#if isCurrentUser}
+						{#if editingName}
+							<input
+								id="edit-username-input"
+								class="rounded border px-2 py-1 text-base"
+								bind:value={newName}
+								onkeydown={handleNameInputKeydown}
+								onblur={saveName}
+							/>
+						{:else}
+							<span>{user.display_name || user.name || 'User'}</span>
+							<button
+								class="ml-2 rounded bg-gray-200 px-2 py-1 text-xs hover:bg-gray-300"
+								onclick={startEditName}
+								aria-label="Edit username">✎</button
+							>
+						{/if}
+					{:else}
+						{user.display_name || user.name || 'User'}
+					{/if}
 				</h2>
 			</div>
 			<div class="profile-details">

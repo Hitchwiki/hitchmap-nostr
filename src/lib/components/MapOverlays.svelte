@@ -1,7 +1,14 @@
 <script lang="ts">
-	import { availableRelays, ndk } from '$lib/ndk.svelte';
-	import type { NDKUserProfile } from '@nostr-dev-kit/ndk';
+	import {
+		availableRelays,
+		initializeSigner,
+		ndk,
+		resetSigner,
+		signer as signerState
+	} from '$lib/ndk.svelte';
+	import { NDKSubscriptionCacheUsage, type NDKUserProfile } from '@nostr-dev-kit/ndk';
 	import { type GeoJSONSource } from 'maplibre-gl';
+	import { onMount } from 'svelte';
 	import UserProfileModal from './UserProfileModal.svelte';
 
 	const {
@@ -40,6 +47,19 @@
 		selectedUserProfile = { ...userProfile, pubkey };
 		profileModalOpen = true;
 	}
+
+	const { instance: signer } = $derived(signerState);
+	let profile = $state<NDKUserProfile | undefined>();
+
+	onMount(async () => {
+		await initializeSigner();
+		if (signer) {
+			const signerUser = await signer.user();
+			if (!signerUser?.profile)
+				await signerUser.fetchProfile({ cacheUsage: NDKSubscriptionCacheUsage.ONLY_RELAY });
+			profile = signerUser.profile;
+		}
+	});
 </script>
 
 {#if isLoadingNotes}
@@ -53,10 +73,22 @@
 	</div>
 {/if}
 
-<UserProfileModal bind:open={profileModalOpen} user={selectedUserProfile} />
+<UserProfileModal
+	bind:open={profileModalOpen}
+	user={selectedUserProfile}
+	isCurrentUser={signer?.pubkey === selectedUserProfile?.pubkey}
+	onUsernameChange={async (newName: string) => {
+		const user = await signer?.user();
+		if (user) {
+			user.profile = { name: newName };
+			await user.publish();
+			profile = user.profile;
+		}
+	}}
+/>
 
 <div
-	class="absolute right-0 bottom-0 z-10 flex max-h-full w-full flex-col-reverse gap-2 overflow-y-scroll p-4 lg:top-0 lg:bottom-auto lg:left-auto lg:max-h-full lg:w-1/3 lg:flex-col"
+	class="absolute right-0 bottom-0 z-30 flex max-h-full w-full flex-col-reverse gap-2 overflow-y-scroll p-4 lg:top-0 lg:bottom-auto lg:left-auto lg:max-h-full lg:w-1/3 lg:flex-col"
 >
 	<div
 		class="flex shrink-0 flex-row gap-2 overflow-x-scroll rounded bg-white p-4 text-xs shadow-md"
@@ -78,6 +110,63 @@
 				<span class="relay-url">{relay}</span>
 			</div>
 		{/each}
+	</div>
+
+	<div
+		class="flex shrink-0 flex-row gap-2 overflow-x-scroll rounded bg-white p-4 text-xs shadow-md"
+	>
+		{#if profile}
+			<div class="flex flex-row items-center gap-3 text-nowrap">
+				<!-- User avatar -->
+				{#if profile?.picture}
+					<img
+						src={profile.picture}
+						alt="User avatar"
+						class="h-8 w-8 rounded-full border border-gray-300 object-cover"
+					/>
+				{:else}
+					<div
+						class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-gray-400"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="h-5 w-5"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M5.121 17.804A9 9 0 1112 21a9 9 0 01-6.879-3.196z"
+							/>
+						</svg>
+					</div>
+				{/if}
+				<div class="flex flex-col">
+					<span class="font-semibold">
+						{profile?.name ?? 'Anonymous'}
+					</span>
+					<span class="font-mono text-xs text-gray-500">
+						{signer?.npub.slice(0, 16)}...
+					</span>
+				</div>
+				<!-- Edit profile button -->
+				<button
+					class="ml-2 rounded border border-blue-500 px-2 py-1 text-blue-500 hover:bg-blue-50"
+					onclick={() => openProfileModal(profile ?? {}, signer?.pubkey ?? '')}
+				>
+					Edit Profile
+				</button>
+				<!-- Reset/Sign out -->
+				<button class="ml-2 text-red-500 hover:underline" onclick={resetSigner}> Sign out </button>
+			</div>
+		{:else}
+			<div class="flex flex-row gap-1 text-nowrap">
+				<span>Not signed in</span>
+			</div>
+		{/if}
 	</div>
 
 	{#if isLoadingInBackground}
@@ -248,22 +337,25 @@
 </div>
 
 <!-- Custom Footer with GitHub and About links -->
-<div class="absolute bottom-4 right-4 z-20">
-	<div class="flex items-center gap-3 rounded-lg bg-white px-4 py-2 text-xs shadow-lg border border-gray-200">
-		<span class="text-gray-600">MapLibre | OpenFreeMap © OpenMapTiles Data from OpenStreetMap</span>
+<div class="absolute right-4 bottom-4 z-20">
+	<div
+		class="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs shadow-lg"
+	>
+		<span class="text-gray-600">MapLibre | OpenFreeMap © OpenMapTiles Data from OpenStreetMap</span
+		>
 		<div class="flex items-center gap-2">
-			<a 
-				href="https://github.com/Hitchwiki/hitchmap-nostr" 
-				target="_blank" 
+			<a
+				href="https://github.com/Hitchwiki/hitchmap-nostr"
+				target="_blank"
 				rel="noopener noreferrer"
 				class="text-blue-600 hover:text-blue-800 hover:underline"
 			>
 				GitHub
 			</a>
 			<span class="text-gray-400">|</span>
-			<a 
-				href="https://hitchwiki.org/en/Hitchwiki:About#maps.hitchwiki.org" 
-				target="_blank" 
+			<a
+				href="https://hitchwiki.org/en/Hitchwiki:About#maps.hitchwiki.org"
+				target="_blank"
 				rel="noopener noreferrer"
 				class="text-blue-600 hover:text-blue-800 hover:underline"
 			>
