@@ -130,14 +130,6 @@
 		<div class="bg-opacity-90 max-h-1/3 overflow-y-auto rounded bg-white p-4 text-sm shadow-md">
 			{#if clickedFeature.cluster}
 				<h2 class="font-bold">Cluster ({clickedFeature.point_count} points)</h2>
-				<details class="mb-4">
-					<summary class="cursor-pointer text-xs text-gray-400">Show raw data</summary>
-					<pre class="bg-gray-100 p-2 text-xs whitespace-pre-wrap">{JSON.stringify(
-							clickedFeature,
-							null,
-							2
-						)}</pre>
-				</details>
 				{#await (async () => {
 					const source = map?.getSource('notes') as GeoJSONSource;
 					let allChildren: any[] = [];
@@ -160,7 +152,17 @@
 					}
 
 					return allChildren.sort((a, b) => b.properties.time - a.properties.time);
-				})() then children}
+				})()}
+					<p>Loading...</p>
+				{:then children}
+					<details class="mb-4">
+						<summary class="cursor-pointer text-xs text-gray-400">Show raw data</summary>
+						<pre class="bg-gray-100 p-2 text-xs whitespace-pre-wrap">{JSON.stringify(
+								{ ...clickedFeature, children },
+								null,
+								2
+							)}</pre>
+					</details>
 					<div class="space-y-4">
 						{#each children as child, i (child.properties?.id || i)}
 							{#if child.properties?.content && child.properties.content.trim() !== ''}
