@@ -348,20 +348,22 @@
 				'circle-color': [
 					'step',
 					['get', 'point_count'],
-					'#176a3c', // green for <50
+					'rgba(23, 106, 60, 0.9)', // green for <50, 70% opacity
 					50,
-					'#ff9800', // orange for 50-300
+					'rgba(255, 152, 0, 0.9)', // orange for 50-300
 					300,
-					'#9c2f2f' // red for >=300
+					'rgba(156, 47, 47, 0.9)' // red for >=300
 				],
-				'circle-radius': [
+				'circle-radius': ['step', ['get', 'point_count'], 20, 100, 30, 750, 40],
+				'circle-stroke-width': 6,
+				'circle-stroke-color': [
 					'step',
 					['get', 'point_count'],
-					20, // small radius for small clusters
-					100,
-					30, // medium radius for medium clusters
-					750,
-					40 // large radius for large clusters
+					'rgba(23, 106, 60, 0.3)', // green stroke, 30% opacity
+					50,
+					'rgba(255, 152, 0, 0.3)', // orange stroke
+					300,
+					'rgba(156, 47, 47, 0.3)' // red stroke
 				]
 			}}
 		/>
