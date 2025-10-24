@@ -72,6 +72,7 @@
 	zoom={2}
 	maxZoom={MAX_ZOOM}
 	standardControls
+	attributionControl={false}
 	style="https://tiles.openfreemap.org/styles/liberty"
 	onclick={() => onClick(null)}
 	projection={{ type: 'globe' }}
