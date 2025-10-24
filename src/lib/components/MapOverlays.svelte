@@ -117,7 +117,11 @@
 			{/if}
 			<details>
 				<summary class="cursor-pointer text-xs text-gray-400">Show raw data</summary>
-				<pre class="text-xs whitespace-pre-wrap p-2 bg-gray-100">{JSON.stringify(entry, null, 2)}</pre>
+				<pre class="bg-gray-100 p-2 text-xs whitespace-pre-wrap">{JSON.stringify(
+						entry,
+						null,
+						2
+					)}</pre>
 			</details>
 		</div>
 	{/snippet}
@@ -125,7 +129,15 @@
 	{#if clickedFeature}
 		<div class="bg-opacity-90 max-h-1/3 overflow-y-auto rounded bg-white p-4 text-sm shadow-md">
 			{#if clickedFeature.cluster}
-				<h2 class="mb-2 font-bold">Cluster ({clickedFeature.point_count} points)</h2>
+				<h2 class="font-bold">Cluster ({clickedFeature.point_count} points)</h2>
+				<details class="mb-4">
+					<summary class="cursor-pointer text-xs text-gray-400">Show raw data</summary>
+					<pre class="bg-gray-100 p-2 text-xs whitespace-pre-wrap">{JSON.stringify(
+							clickedFeature,
+							null,
+							2
+						)}</pre>
+				</details>
 				{#await (async () => {
 					const source = map?.getSource('notes') as GeoJSONSource;
 					let allChildren: any[] = [];
