@@ -56,7 +56,7 @@
 <UserProfileModal bind:open={profileModalOpen} user={selectedUserProfile} />
 
 <div
-	class="absolute right-0 bottom-0 z-10 flex h-1/2 max-h-full w-full flex-col-reverse gap-2 overflow-y-scroll p-4 lg:top-0 lg:bottom-auto lg:left-auto lg:h-full lg:w-1/3 lg:flex-col"
+	class="absolute right-0 bottom-0 z-10 flex max-h-full w-full flex-col-reverse gap-2 overflow-y-scroll p-4 lg:top-0 lg:bottom-auto lg:left-auto lg:max-h-full lg:w-1/3 lg:flex-col"
 >
 	<div
 		class="flex shrink-0 flex-row gap-2 overflow-x-scroll rounded bg-white p-4 text-xs shadow-md"
