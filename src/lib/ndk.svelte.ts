@@ -53,7 +53,7 @@ export async function initializeSigner() {
 	signer.instance = NDKPrivateKeySigner.generate();
 	ndk.signer = signer.instance;
 	localStorage.setItem('hitchmap:signer', await signer.instance.toPayload());
-	return signer;
+	return signer.instance;
 }
 
 export async function resetSigner() {

@@ -51,6 +51,11 @@
 	const { instance: signer } = $derived(signerState);
 	let profile = $state<NDKUserProfile | undefined>();
 
+	const onResetSigner = async () => {
+		profile = undefined;
+		resetSigner();
+	};
+
 	onMount(async () => {
 		await initializeSigner();
 		if (signer) {
@@ -115,7 +120,7 @@
 	<div
 		class="flex shrink-0 flex-row gap-2 overflow-x-scroll rounded bg-white p-4 text-xs shadow-md"
 	>
-		{#if profile}
+		{#if profile || signer}
 			<div class="flex flex-row items-center gap-3 text-nowrap">
 				<!-- User avatar -->
 				{#if profile?.picture}
@@ -160,7 +165,7 @@
 					Edit Profile
 				</button>
 				<!-- Reset/Sign out -->
-				<button class="ml-2 text-red-500 hover:underline" onclick={resetSigner}> Sign out </button>
+				<button class="ml-2 text-red-500 hover:underline" onclick={onResetSigner}> Sign out </button>
 			</div>
 		{:else}
 			<div class="flex flex-row gap-1 text-nowrap">
