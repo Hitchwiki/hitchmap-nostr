@@ -117,7 +117,7 @@
 			{/if}
 			<details>
 				<summary class="cursor-pointer text-xs text-gray-400">Show raw data</summary>
-				<pre class="text-xs whitespace-pre-wrap">{JSON.stringify(entry, null, 2)}</pre>
+				<pre class="text-xs whitespace-pre-wrap p-2 bg-gray-100">{JSON.stringify(entry, null, 2)}</pre>
 			</details>
 		</div>
 	{/snippet}
