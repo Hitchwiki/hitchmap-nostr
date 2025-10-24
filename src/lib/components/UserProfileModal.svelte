@@ -5,7 +5,8 @@
 	let {
 		user,
 		open = $bindable(false)
-	}: { user: NDKUserProfile & { pubkey: string }; open: boolean } = $props();
+	}: { user?: (NDKUserProfile & { pubkey: string }) | null; open: boolean } = $props();
+
 	let closeBtn: HTMLButtonElement | undefined = $state();
 
 	function close() {
@@ -28,7 +29,7 @@
 	});
 </script>
 
-{#if open}
+{#if open && user}
 	<div
 		class="fixed inset-0 z-100 flex items-center justify-center bg-black/30 backdrop-blur-sm"
 		role="button"
