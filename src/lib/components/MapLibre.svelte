@@ -2,9 +2,9 @@
 	import type { Feature, Geometry } from 'geojson';
 	import {
 		CircleLayer,
+		GeoJSON,
 		type LayerClickInfo,
 		MapLibre,
-		GeoJSON,
 		SymbolLayer
 	} from 'svelte-maplibre';
 
@@ -21,13 +21,15 @@
 		rating?: number;
 	};
 
-	const {
+	let {
 		onClick,
 		data,
+		map = $bindable(undefined),
 		...props
 	}: {
 		onClick: (feature: SingleProperties | null) => void;
 		data: GeoJSON.FeatureCollection<Geometry, SingleProperties>;
+		map: maplibregl.Map | undefined;
 	} = $props();
 </script>
 
@@ -39,6 +41,7 @@
 	style="https://tiles.openfreemap.org/styles/liberty"
 	onclick={() => onClick(null)}
 	projection={{ type: 'globe' }}
+	bind:map
 	{...props}
 >
 	<GeoJSON
