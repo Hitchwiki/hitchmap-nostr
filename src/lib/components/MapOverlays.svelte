@@ -94,6 +94,34 @@
 		</div>
 	{/if}
 
+	{#snippet overview(rating?: number, waitingTime?: number, distance?: number)}
+		<div class="flex items-center gap-4 text-xs text-gray-700">
+			{#if rating}
+				<div class="flex items-center gap-1">
+					<span class="text-gray-500">Rating</span>
+					<span class="font-semibold">{Math.round(rating)}</span>
+					<span class="text-gray-400">/</span>
+					<span class="text-gray-400">5</span>
+					<span class="text-yellow-400">★</span>
+				</div>
+			{/if}
+			{#if waitingTime}
+				<div>
+					<span class="text-gray-500">Waiting Time</span>
+					<span class="font-semibold">{waitingTime}</span>
+					<span class="text-gray-400">min</span>
+				</div>
+			{/if}
+			{#if distance}
+				<div>
+					<span class="text-gray-500">Ride Distance</span>
+					<span class="font-semibold">{distance}</span>
+					<span class="text-gray-400">km</span>
+				</div>
+			{/if}
+		</div>
+	{/snippet}
+
 	{#snippet note(entry: {
 		pubkey?: string;
 		username?: string;
@@ -137,7 +165,7 @@
 	{/snippet}
 
 	{#if clickedFeature}
-		<div class="overflow-y-auto rounded bg-white p-4 text-sm shadow-md">
+		<div class="space-y-2 overflow-y-auto rounded bg-white p-4 text-sm shadow-md">
 			{#if clickedFeature.cluster}
 				<h2 class="font-bold">Cluster ({clickedFeature.point_count} points)</h2>
 				{#await (async () => {
@@ -163,6 +191,7 @@
 
 					return allChildren.sort((a, b) => b.properties.time - a.properties.time);
 				})()}
+					<h3>Reviews</h3>
 					<p>Loading...</p>
 				{:then children}
 					<details class="mb-4">
@@ -173,6 +202,12 @@
 								2
 							)}</pre>
 					</details>
+					{@render overview(
+						clickedFeature.total_rating / clickedFeature.point_count,
+						undefined,
+						undefined
+					)}
+					<h3 class="font-bold">Reviews</h3>
 					<div class="space-y-4">
 						{#each children as child, i (child.properties?.id || i)}
 							{#if child.properties?.content && child.properties.content.trim() !== ''}
@@ -193,6 +228,11 @@
 					<p class="text-red-500">Failed to load cluster children: {error.message}</p>
 				{/await}
 			{:else}
+				{@render overview(
+					clickedFeature.rating,
+					undefined,
+					undefined
+				)}
 				{@render note({
 					...clickedFeature,
 					user:
