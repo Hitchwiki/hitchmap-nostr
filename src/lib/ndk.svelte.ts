@@ -1,5 +1,5 @@
 import NDKCacheAdapterSqliteWasm from '@nostr-dev-kit/cache-sqlite-wasm';
-import { NDKPrivateKeySigner, type NDKCacheAdapter } from '@nostr-dev-kit/ndk';
+import { NDKNip07Signer, NDKPrivateKeySigner, type NDKCacheAdapter } from '@nostr-dev-kit/ndk';
 import { NDKSvelte } from '@nostr-dev-kit/svelte';
 import { SvelteSet } from 'svelte/reactivity';
 
@@ -22,7 +22,7 @@ let selectedRelayUrls = new SvelteSet(DEFAULT_RELAYS);
 export const availableRelays = DEFAULT_RELAYS;
 
 export let signer: {
-	instance: NDKPrivateKeySigner | undefined;
+	instance: NDKPrivateKeySigner | NDKNip07Signer | undefined;
 } = $state({
 	instance: undefined
 });
@@ -30,11 +30,24 @@ export let signer: {
 export const ndk = new NDKSvelte({
 	explicitRelayUrls: Array.from(selectedRelayUrls),
 	autoConnectUserRelays: true,
-	cacheAdapter,
+	cacheAdapter
 });
 
+// @todo Test NIP-07
 export async function initializeSigner() {
 	if (signer.instance) return signer.instance;
+
+	if (window.nostr) {
+		try {
+			const nip07Signer = new NDKNip07Signer();
+			await nip07Signer.blockUntilReady();
+			signer.instance = nip07Signer;
+			ndk.signer = signer.instance;
+			return signer.instance;
+		} catch (e) {
+			console.warn('Failed to initialize NIP-07 signer, falling back to private key signer.', e);
+		}
+	}
 
 	const storedSigner = localStorage.getItem('hitchmap:signer');
 	if (storedSigner) {

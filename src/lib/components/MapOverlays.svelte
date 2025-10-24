@@ -154,7 +154,9 @@
 						{profile?.name ?? 'Anonymous'}
 					</span>
 					<span class="font-mono text-xs text-gray-500">
-						{signer?.npub.slice(0, 16)}...
+						{#await signer?.user() then user}
+							{user?.npub.slice(0, 16)}...
+						{/await}
 					</span>
 				</div>
 				<!-- Edit profile button -->
