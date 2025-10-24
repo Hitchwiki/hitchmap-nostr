@@ -133,7 +133,8 @@ class DefaultProcessor extends IEventProcessor {
 				geohash: coordinates.geohash || undefined,
 				coordinates: coordinates.lngLat,
 				tags: event.tags,
-				rating
+				/** @todo Remove the random calculation when data is available. */
+				rating: typeof rating !== 'undefined' ? rating : Math.floor(Math.random() * 5) + 1
 			}
 		};
 	}
@@ -182,6 +183,7 @@ class Kind36820Processor extends DefaultProcessor {
 				geohash: coordinates.geohash || undefined,
 				coordinates: coordinates.lngLat,
 				tags: event.tags,
+				/** @todo Remove the random calculation when data is available. */
 				rating: typeof rating !== 'undefined' ? rating : Math.floor(Math.random() * 5) + 1
 			}
 		};
@@ -215,7 +217,7 @@ class EventProcessorWorkerManager {
 
 	// Initialize workers based on hardware concurrency
 	// Reserve a few for cache and other things.
-	constructor(workerCount: number = (navigator.hardwareConcurrency - 5) || 4) {
+	constructor(workerCount: number = navigator.hardwareConcurrency - 5 || 4) {
 		if (typeof window === 'undefined' || !window.Worker) {
 			console.warn('Web Workers are not supported in this environment.');
 			return;
