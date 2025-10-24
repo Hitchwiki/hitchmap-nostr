@@ -46,22 +46,23 @@
 	const POINT_COUNT_THRESHOLD_1 = 50;
 	const POINT_COUNT_THRESHOLD_2 = 300;
 
-	const createPointColor = (ratingAttribute: string) => {
+	const createPointColor = (ratingAttribute: string | (string | string[])[]) => {
 		return [
-			'case',
-			['has', ratingAttribute],
+			'interpolate',
+			['linear'],
 			[
-				'interpolate',
-				['linear'],
-				['get', ratingAttribute],
-				1,
-				'#9c2f2f', // red for bad (rating 1)
-				3,
-				'#ff9800', // orange for medium (rating 3)
-				5,
-				'#2ecc40' // brighter green for good (rating 5)
+				'coalesce',
+				typeof ratingAttribute === 'string' ? ['get', ratingAttribute] : ratingAttribute,
+				0
 			],
-			'#11b4da' // default color if no rating
+			0,
+			'#11b4da', // fallback color if value is 0 or missing
+			1,
+			'#9c2f2f', // red for bad (rating 1)
+			3,
+			'#ff9800', // orange for medium (rating 3)
+			5,
+			'#2ecc40' // brighter green for good (rating 5)
 		] as any;
 	};
 </script>
@@ -83,8 +84,7 @@
 		cluster={{
 			radius: 75,
 			properties: {
-				point_count: ['+', ['get', 'point_count']],
-				average_rating: ['+', ['get', 'rating']]
+				total_rating: ['+', ['get', 'rating']]
 			}
 		}}
 	>
@@ -108,7 +108,7 @@
 						'rgba(156, 47, 47, 0.9)' // red for >=300
 					],
 					MAX_ZOOM,
-					createPointColor('average_rating')
+					createPointColor(['/', ['get', 'total_rating'], ['get', 'point_count']])
 				],
 				'circle-radius': [
 					'step',
