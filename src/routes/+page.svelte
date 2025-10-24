@@ -321,6 +321,7 @@
 	bind:map
 	center={[50, 20]}
 	zoom={2}
+	maxZoom={14}
 	standardControls
 	style="https://tiles.openfreemap.org/styles/liberty"
 	onclick={() => (clickedFeature = null)}
@@ -331,7 +332,6 @@
 		data={notesOnMap}
 		cluster={{
 			radius: 75,
-			maxZoom: 14,
 			properties: {
 				point_count: ['+', ['get', 'point_count']]
 			}
@@ -402,9 +402,9 @@
 					],
 					'#11b4da' // default color if no rating
 				],
-				'circle-radius': 4,
+				'circle-radius': 6,
 				'circle-stroke-width': 1,
-				'circle-stroke-color': '#fff'
+				'circle-stroke-color': '#000'
 			}}
 		/>
 	</GeoJSON>
