@@ -1,3 +1,14 @@
+hitchmap nostr
+==============
+
+
+Hitchmap nostr is an effort to put hitchhiking spots and related information on nostr and allowing users to link their existing identities (e.g. [trustroots nip5](https://ideas.trustroots.org/2024/08/14/nostr-updates/)).
+
+Spots, rides and recent changes on hitchwiki are fetched by the [nostrhitch bot](https://github.com/Hitchwiki/nostrhitch) and converted into nostr notes.
+
+
+
+
 # sv
 
 Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
