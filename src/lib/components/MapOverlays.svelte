@@ -12,6 +12,14 @@
 		collectedBackgroundEvents,
 		clickedFeature,
 		map
+	}: {
+		isLoadingNotes: boolean;
+		processedEvents: number;
+		eventsToProcess: number;
+		isLoadingInBackground: boolean;
+		collectedBackgroundEvents: any[];
+		clickedFeature: any;
+		map: maplibregl.Map | undefined;
 	} = $props();
 
 	const getRelayStatus = $derived.by(() => {
@@ -47,7 +55,9 @@
 
 <UserProfileModal bind:open={profileModalOpen} user={selectedUserProfile} />
 
-<div class="absolute top-0 right-0 z-10 flex max-h-full w-1/3 flex-col gap-2 overflow-y-scroll p-4">
+<div
+	class="absolute right-0 bottom-0 z-10 flex h-1/2 max-h-full w-full flex-col-reverse gap-2 overflow-y-scroll p-4 lg:top-0 lg:bottom-auto lg:left-auto lg:h-full lg:w-1/3 lg:flex-col"
+>
 	<div
 		class="flex shrink-0 flex-row gap-2 overflow-x-scroll rounded bg-white p-4 text-xs shadow-md"
 	>
@@ -127,7 +137,7 @@
 	{/snippet}
 
 	{#if clickedFeature}
-		<div class="bg-opacity-90 max-h-1/3 overflow-y-auto rounded bg-white p-4 text-sm shadow-md">
+		<div class="overflow-y-auto rounded bg-white p-4 text-sm shadow-md">
 			{#if clickedFeature.cluster}
 				<h2 class="font-bold">Cluster ({clickedFeature.point_count} points)</h2>
 				{#await (async () => {
