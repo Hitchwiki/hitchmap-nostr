@@ -130,36 +130,39 @@
 		user?: any;
 	})}
 		{@const username = entry.username ?? entry.user?.name ?? 'Anonymous'}
-		<div class="space-y-1">
+		<div class="space-y-3 border-b border-gray-300 last-of-type:border-0">
 			<div>{entry.content}</div>
-			{#if entry.time}
-				<div class="text-xs text-gray-500">
-					- {#if entry.pubkey}
-						{#await ndk.fetchUser(entry.pubkey) then user}
-							{#await user?.fetchProfile() then profile}
-								{#if profile}
-									<button
-										class="text-blue-500 hover:underline"
-										onclick={() => openProfileModal(profile, entry.pubkey!)}
-									>
-										{username ?? profile?.name ?? 'Anonymous'}
-									</button>
-								{:else}
-									{username ?? 'Anonymous'}
-								{/if}
-							{/await}
-						{/await}
-					{/if},
-					{new Date(entry.time * 1000).toLocaleString()}
-				</div>
-			{/if}
-			<details>
-				<summary class="cursor-pointer text-xs text-gray-400">Show raw data</summary>
-				<pre class="bg-gray-100 p-2 text-xs whitespace-pre-wrap">{JSON.stringify(
-						entry,
-						null,
-						2
-					)}</pre>
+			<details class="space-y-4">
+				<summary class="flex list-none items-center justify-between">
+					{#if entry.time}
+						<div class="text-xs text-gray-500">
+							- {#if entry.pubkey}
+								{#await ndk.fetchUser(entry.pubkey) then user}
+									{#await user?.fetchProfile() then profile}
+										{#if profile}
+											<button
+												class="text-blue-500 hover:underline"
+												onclick={() => openProfileModal(profile, entry.pubkey!)}
+											>
+												{username ?? profile?.name ?? 'Anonymous'}
+											</button>
+										{:else}
+											{username ?? 'Anonymous'}
+										{/if}
+									{/await}
+								{/await}
+							{/if},
+							{new Date(entry.time * 1000).toLocaleDateString(undefined, {
+								year: 'numeric',
+								month: 'long'
+							})}
+						</div>
+					{/if}
+					<span class="cursor-pointer text-xs text-gray-400">Show raw data</span>
+				</summary>
+				<pre class="bg-gray-100 p-2 text-xs whitespace-pre-wrap">
+					{JSON.stringify(entry, null, 2)}
+				</pre>
 			</details>
 		</div>
 	{/snippet}
@@ -167,7 +170,6 @@
 	{#if clickedFeature}
 		<div class="space-y-2 overflow-y-auto rounded bg-white p-4 text-sm shadow-md">
 			{#if clickedFeature.cluster}
-				<h2 class="font-bold">Cluster ({clickedFeature.point_count} points)</h2>
 				{#await (async () => {
 					const source = map?.getSource('notes') as GeoJSONSource;
 					let allChildren: any[] = [];
@@ -191,11 +193,15 @@
 
 					return allChildren.sort((a, b) => b.properties.time - a.properties.time);
 				})()}
-					<h3>Reviews</h3>
+					<h2 class="font-bold">Cluster ({clickedFeature.point_count} points)</h2>
+					<h3 class="font-bold">Comments</h3>
 					<p>Loading...</p>
 				{:then children}
 					<details class="mb-4">
-						<summary class="cursor-pointer text-xs text-gray-400">Show raw data</summary>
+						<summary class="flex list-none items-center justify-between">
+							<h2 class="font-bold">Cluster ({clickedFeature.point_count} points)</h2>
+							<span class="cursor-pointer text-xs text-gray-400">Show raw data</span>
+						</summary>
 						<pre class="bg-gray-100 p-2 text-xs whitespace-pre-wrap">{JSON.stringify(
 								{ ...clickedFeature, children },
 								null,
@@ -207,7 +213,7 @@
 						undefined,
 						undefined
 					)}
-					<h3 class="font-bold">Reviews</h3>
+					<h3 class="font-bold">Comments</h3>
 					<div class="space-y-4">
 						{#each children as child, i (child.properties?.id || i)}
 							{#if child.properties?.content && child.properties.content.trim() !== ''}
@@ -228,11 +234,7 @@
 					<p class="text-red-500">Failed to load cluster children: {error.message}</p>
 				{/await}
 			{:else}
-				{@render overview(
-					clickedFeature.rating,
-					undefined,
-					undefined
-				)}
+				{@render overview(clickedFeature.rating, undefined, undefined)}
 				{@render note({
 					...clickedFeature,
 					user:
