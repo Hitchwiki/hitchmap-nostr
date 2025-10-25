@@ -2,8 +2,7 @@ import NDKCacheAdapterSqliteWasm from '@nostr-dev-kit/cache-sqlite-wasm';
 import { NDKNip07Signer, NDKPrivateKeySigner, type NDKCacheAdapter } from '@nostr-dev-kit/ndk';
 import { NDKSvelte } from '@nostr-dev-kit/svelte';
 import { SvelteSet } from 'svelte/reactivity';
-
-const BASE_PATH = import.meta.env.DEV ? '/' : '/hitchmap-nostr/';
+import { BASE_PATH, DEFAULT_RELAYS } from './constants';
 
 let cacheAdapter: NDKCacheAdapter | undefined = $state(undefined);
 
@@ -12,11 +11,9 @@ if (typeof window !== 'undefined') {
 		dbName: 'hitchmap-ndk',
 		useWorker: true,
 		workerUrl: `${BASE_PATH}wasm/worker.js`,
-		wasmUrl: `${BASE_PATH}wasm/sql-wasm.wasm`,
+		wasmUrl: `${BASE_PATH}wasm/sql-wasm.wasm`
 	}) as any;
 }
-
-export const DEFAULT_RELAYS = ['wss://relay.nomadwiki.org', 'wss://relay.trustroots.org'];
 
 let selectedRelayUrls = new SvelteSet(DEFAULT_RELAYS);
 export const availableRelays = DEFAULT_RELAYS;
@@ -80,7 +77,9 @@ export async function resetSigner() {
 	if (typeof window === 'undefined') return;
 
 	if (cacheAdapter) {
-		console.log(`Setting up NDK Sqlite WASM Cache Adapter, ${cacheAdapter ? 'success' : 'failed'} – ${JSON.stringify(cacheAdapter)}`);
+		console.log(
+			`Setting up NDK Sqlite WASM Cache Adapter, ${cacheAdapter ? 'success' : 'failed'} – ${JSON.stringify(cacheAdapter)}`
+		);
 		await cacheAdapter?.initializeAsync?.(ndk);
 	}
 

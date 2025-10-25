@@ -1,17 +1,16 @@
 import NDKCacheAdapterSqliteWasm from '@nostr-dev-kit/cache-sqlite-wasm';
 import type { NDKCacheAdapter } from '@nostr-dev-kit/ndk';
 import NDK from '@nostr-dev-kit/ndk';
-import { DEFAULT_RELAYS } from './ndk.svelte';
+import { BASE_PATH, DEFAULT_RELAYS } from './constants';
 
-const BASE_PATH = import.meta.env.DEV ? '/' : '/hitchmap-nostr/';
 const BATCH_SIZE = 500;
 const LIMIT = Number.MAX_SAFE_INTEGER; // 9007199254740991
 
 let selectedRelayUrls = new Set(DEFAULT_RELAYS);
 export const availableRelays = DEFAULT_RELAYS;
 
-/** 
- * @todo The problem with the cache in the background worker seems to be either: 
+/**
+ * @todo The problem with the cache in the background worker seems to be either:
  * a) the IndexedDB is persisted only after the final save in SQLite is done; this might take a while.
  * b) a cache needs to be properly initialized before the background worker runs (i.e. reload once?)
  * */
@@ -32,7 +31,7 @@ export const ndk = new NDK({
 	await ndk
 		.connect()
 		.then(() => self.postMessage({ type: 'log', message: 'Web Worker: NDK Connected' }));
-		
+
 	cacheAdapter.initializeAsync?.(ndk);
 
 	/** @todo Check if with new fixes, the subscription will work again (allows us to communicate progress) */
