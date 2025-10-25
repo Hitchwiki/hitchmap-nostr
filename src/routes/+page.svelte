@@ -5,18 +5,11 @@
 	import { ndk } from '$lib/ndk.svelte';
 	import { type NDKEvent, type NDKRawEvent } from '@nostr-dev-kit/ndk';
 	import { onMount } from 'svelte';
+	import { DEFAULT_FILTERS } from '$lib/constants';
 
 	let map = $state<maplibregl.Map | undefined>(undefined);
 
-	const INITIAL_NOTE_COUNT = 1000; /** @todo Maybe make an environment variable. */
-
-	const defaultFilters = {
-		limit: INITIAL_NOTE_COUNT,
-		kinds: [1, 36820] as any[],
-		'#t': ['hitchmap']
-		// This will result in too few results.
-		// '#g': [...'0123456789bcdefghjkmnpqrstuvwxyz']
-	};
+	const INITIAL_NOTE_COUNT = 250; /** @todo Maybe make an environment variable. */
 
 	let loadingState = $state<'loading' | 'background' | null>('loading');
 
@@ -125,7 +118,10 @@
 
 	onMount(async () => {
 		ndk.subscribe(
-			defaultFilters,
+			{
+				...DEFAULT_FILTERS,
+				limit: INITIAL_NOTE_COUNT
+			},
 			{
 				closeOnEose: false,
 				cacheUnconstrainFilter: ['limit']

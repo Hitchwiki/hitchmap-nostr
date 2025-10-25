@@ -1,7 +1,7 @@
 import NDKCacheAdapterSqliteWasm from '@nostr-dev-kit/cache-sqlite-wasm';
 import type { NDKCacheAdapter } from '@nostr-dev-kit/ndk';
 import NDK from '@nostr-dev-kit/ndk';
-import { BASE_PATH, DEFAULT_RELAYS } from './constants';
+import { BASE_PATH, DEFAULT_FILTERS, DEFAULT_RELAYS } from './constants';
 
 const BATCH_SIZE = 500;
 const LIMIT = Number.MAX_SAFE_INTEGER; // 9007199254740991
@@ -36,8 +36,7 @@ export const ndk = new NDK({
 
 	/** @todo Check if with new fixes, the subscription will work again (allows us to communicate progress) */
 	const events = await ndk.fetchEvents({
-		kinds: [1, 36820] as any[],
-		'#t': ['hitchmap'],
+		...DEFAULT_FILTERS,
 		limit: LIMIT
 	});
 
