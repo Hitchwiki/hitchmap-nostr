@@ -1,8 +1,7 @@
-import type { NDKEvent, NDKRawEvent } from '@nostr-dev-kit/ndk';
 import type { Feature as GeoJSONFeature, Geometry } from 'geojson';
+import type { HitchhikingRide } from '../types/hitchhiking';
 import { IEventProcessor } from './BaseProcessor';
 import type { SingleProperties } from './types';
-import type { HitchhikingRide } from '../types/hitchhiking';
 
 // Concrete Kind34242Processor class
 export class Kind34242Processor extends IEventProcessor {
@@ -11,13 +10,57 @@ export class Kind34242Processor extends IEventProcessor {
 			throw new Error('Invalid event structure');
 		}
 
-		let rideData: HitchhikingRide;
+		let rideData: HitchhikingRide | null = null;
 		try {
 			console.log('Processing kind 34242 event:', event);
 			rideData = JSON.parse(event.content);
 		} catch (error) {
-			console.error('Failed to parse JSON for kind 34242 event:', error);
-			return null;
+			console.warn('Failed to parse JSON for kind 34242 event, treating as plain text:', error);
+		}
+
+		// If parsing failed, treat as plain text event
+		if (!rideData) {
+			const location = this.extractLocation(event);
+			if (!location) return null;
+			const { lngLat: coordinates, geohash } = location;
+			// Extract username if present in event.content
+			let content = event.content;
+			let username: string | undefined = undefined;
+
+			const hitchmapUserRegex = /^hitchmap\.com\s+([a-zA-Z0-9_]+):\s*/i;
+			const hitchmapPrefixRegex = /^hitchmap\.com\s*:\s*/i;
+			const hitchhikingHashtagRegex = /\s*#hitchhiking\s*$/i;
+
+			const userMatch = content.match(hitchmapUserRegex);
+			if (userMatch) {
+				username = userMatch[1];
+				content = content.replace(hitchmapUserRegex, '');
+			} else if (hitchmapPrefixRegex.test(content)) {
+				content = content.replace(hitchmapPrefixRegex, '');
+			}
+
+			// Remove trailing #hitchhiking hashtag if present
+			content = content.replace(hitchhikingHashtagRegex, '');
+
+			return {
+				type: 'Feature',
+				geometry: {
+					type: 'Point',
+					coordinates
+				},
+				properties: {
+					kind: event.kind,
+					id: event.id,
+					pubkey: event.pubkey,
+					user: username,
+					time: event.created_at,
+					content: content.trim(),
+					geohash: geohash || undefined,
+					coordinates,
+					tags: event.tags,
+					rating: undefined
+				}
+			};
 		}
 
 		if (!rideData.stops || rideData.stops.length === 0) return null;
