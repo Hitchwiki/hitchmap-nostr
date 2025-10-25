@@ -5,7 +5,7 @@ import { DEFAULT_RELAYS } from './ndk.svelte';
 
 const BASE_PATH = import.meta.env.DEV ? '/' : '/hitchmap-nostr/';
 const BATCH_SIZE = 500;
-const LIMIT = 5000; //Number.MAX_SAFE_INTEGER; // 9007199254740991
+const LIMIT = Number.MAX_SAFE_INTEGER; // 9007199254740991
 
 let selectedRelayUrls = new Set(DEFAULT_RELAYS);
 export const availableRelays = DEFAULT_RELAYS;
