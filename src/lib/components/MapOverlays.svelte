@@ -333,11 +333,7 @@
 			{:else}
 				{@render overview(clickedFeature.rating, undefined, undefined)}
 				{@render note({
-					...clickedFeature,
-					user:
-						typeof clickedFeature.user === 'string'
-							? JSON.parse(clickedFeature.user)
-							: clickedFeature.user
+					...clickedFeature
 				} as any)}
 			{/if}
 		</div>
