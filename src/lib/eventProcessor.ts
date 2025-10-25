@@ -1,194 +1,9 @@
 import type { Feature as GeoJSONFeature, Geometry } from 'geojson';
-import { decodeGeoHash } from './geohash';
-
-interface LocationData {
-	latitude: number;
-	longitude: number;
-	accuracy?: number;
-	timestamp?: number;
-}
-
-interface UserProfile {
-	id: string;
-	name: string;
-	avatar?: string;
-	bio?: string;
-}
-
-interface Feature {
-	name: string;
-	enabled: boolean;
-	value?: any;
-}
-
-interface ProcessedContent {
-	text: string;
-	media?: string[];
-	links?: string[];
-}
-
-interface ProcessedData {
-	content: ProcessedContent;
-	location?: LocationData;
-	user: UserProfile;
-	features: Feature[];
-	timestamp: number;
-	kind: number;
-}
-
-type SingleProperties = {
-	id: string;
-	pubkey: string;
-	user: any;
-	time: number;
-	username?: string;
-	content: string;
-	geohash?: string;
-	coordinates: [number, number];
-	tags: any[];
-	rating?: number;
-};
-
-// Abstract EventProcessor base class
-abstract class IEventProcessor {
-	constructor() {}
-
-	abstract processWorker(event: any): Promise<any>;
-
-	abstract process(event: any): Promise<GeoJSONFeature<Geometry, SingleProperties> | null>;
-
-	// Shared method to validate event structure
-	protected validateEvent(event: any): boolean {
-		return event && typeof event === 'object' && 'kind' in event && 'content' in event;
-	}
-
-	// Extract location from event tags
-	protected extractLocation(
-		event: any
-	): { lngLat: [number, number]; geohash: string | null } | null {
-		if (!event?.tags?.length) return null;
-
-		const longestGTag = event.tags
-			.filter((tag: any) => tag[0] === 'g' && typeof tag[1] === 'string' && tag[1].length)
-			.reduce(
-				(longest: string, tag: any) => (tag[1].length > longest.length ? tag[1] : longest),
-				''
-			);
-
-		if (!longestGTag) return null;
-
-		// Check if longestGTag is in "lat,lng" format
-		const latLngMatch = longestGTag.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
-		if (latLngMatch) {
-			const lat = parseFloat(latLngMatch[1]);
-			const lng = parseFloat(latLngMatch[3]);
-			if (isFinite(lat) && isFinite(lng)) {
-				return { lngLat: [lng, lat], geohash: null };
-			}
-			return null;
-		}
-
-		// Import decodeGeoHash dynamically to avoid circular imports
-		const location = decodeGeoHash(longestGTag);
-		if (!location) return null;
-		return { lngLat: [location.longitude[2], location.latitude[2]], geohash: longestGTag };
-	}
-}
-
-// Concrete DefaultProcessor class
-class DefaultProcessor extends IEventProcessor {
-	async processWorker(event: any): Promise<any> {}
-
-	async process(event: any): Promise<GeoJSONFeature<Geometry, SingleProperties> | null> {
-		if (!this.validateEvent(event)) {
-			throw new Error('Invalid event structure');
-		}
-
-		const coordinates = this.extractLocation(event);
-		if (!coordinates) return null;
-
-		let username: string | null = null;
-		let { content, created_at: time, rating } = event;
-
-		const match = content.match(/^hitchmap\.com\s*(.*?):\s*/);
-		if (match) {
-			username = match[1]?.trim() || null;
-			content = content.slice(match[0].length);
-		}
-		content = content.replace(/\s*#hitchhiking\s*$/i, '').trim();
-
-		return {
-			type: 'Feature',
-			geometry: {
-				type: 'Point',
-				coordinates: coordinates.lngLat
-			},
-			properties: {
-				id: event.id,
-				pubkey: event.pubkey,
-				user: null, //profile,
-				time,
-				username: username || undefined,
-				content,
-				geohash: coordinates.geohash || undefined,
-				coordinates: coordinates.lngLat,
-				tags: event.tags,
-				/** @todo Remove the random calculation when data is available. */
-				rating: typeof rating !== 'undefined' ? rating : Math.floor(Math.random() * 5) + 1
-			}
-		};
-	}
-}
-
-// Concrete Kind36820Processor class
-class Kind36820Processor extends DefaultProcessor {
-	async process(event: any): Promise<GeoJSONFeature<Geometry, SingleProperties> | null> {
-		if (!this.validateEvent(event)) {
-			throw new Error('Invalid event structure');
-		}
-
-		const coordinates = this.extractLocation(event);
-		if (!coordinates) return null;
-
-		let username: string | null = null;
-		let { content, created_at: time, rating } = event;
-
-		try {
-			const data = JSON.parse(content);
-			username = data?.hitchhikers?.[0]?.nickname ?? null;
-			content = data.comment || content;
-			if (data.submission_time) {
-				const date = new Date(data.submission_time);
-				if (!isNaN(date.getTime())) time = Math.floor(date.getTime() / 1000);
-			}
-			if (typeof data.rating !== 'undefined') rating = data.rating;
-		} catch (error) {
-			console.error('Failed to parse JSON for kind 36820 event:', error);
-			return null;
-		}
-
-		return {
-			type: 'Feature',
-			geometry: {
-				type: 'Point',
-				coordinates: coordinates.lngLat
-			},
-			properties: {
-				id: event.id,
-				pubkey: event.pubkey,
-				user: null, //profile,
-				time,
-				username: username || undefined,
-				content,
-				geohash: coordinates.geohash || undefined,
-				coordinates: coordinates.lngLat,
-				tags: event.tags,
-				/** @todo Remove the random calculation when data is available. */
-				rating: typeof rating !== 'undefined' ? rating : Math.floor(Math.random() * 5) + 1
-			}
-		};
-	}
-}
+import { DefaultProcessor } from './processors/DefaultProcessor';
+import { Kind36820Processor } from './processors/Kind36820Processor';
+import { Kind34242Processor } from './processors/Kind34242Processor';
+import { IEventProcessor } from './processors/BaseProcessor';
+import type { LocationData, ProcessedContent, ProcessedData, UserProfile, SingleProperties } from './processors/types';
 
 // EventProcessorFactory class
 class EventProcessorFactory {
@@ -209,6 +24,7 @@ class EventProcessorFactory {
 
 // Register processors
 EventProcessorFactory.register(36820, Kind36820Processor);
+EventProcessorFactory.register(34242, Kind34242Processor);
 
 class EventProcessorWorkerManager {
 	private workers: Worker[] = [];
@@ -239,7 +55,7 @@ class EventProcessorWorkerManager {
 		return worker;
 	}
 
-	processWithWorker(event: any): Promise<any> {
+	processWithWorker(event: any): Promise<GeoJSONFeature<Geometry, SingleProperties> | null> {
 		const worker = this.getNextWorker();
 
 		if (!worker || !window.Worker) {
@@ -290,21 +106,23 @@ class EventProcessorWorkerManager {
 			(worker as any)._hasGlobalListener = true;
 		}
 
-		const promise = new Promise((resolve, reject) => {
-			listeners.set(requestId, { resolve, reject });
+		const promise = new Promise<GeoJSONFeature<Geometry, SingleProperties> | null>(
+			(resolve, reject) => {
+				listeners.set(requestId, { resolve, reject });
 
-			worker.postMessage({
-				requestId,
-				event: {
-					tags: event.tags,
-					kind: event.kind,
-					content: event.content,
-					created_at: event.created_at,
-					id: event.id,
-					pubkey: event.pubkey
-				}
-			});
-		});
+				worker.postMessage({
+					requestId,
+					event: {
+						tags: event.tags,
+						kind: event.kind,
+						content: event.content,
+						created_at: event.created_at,
+						id: event.id,
+						pubkey: event.pubkey
+					}
+				});
+			}
+		);
 
 		this.pendingPromises.set(requestId, promise);
 
