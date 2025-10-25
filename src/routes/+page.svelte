@@ -8,31 +8,37 @@
 
 	let map = $state<maplibregl.Map | undefined>(undefined);
 
+	const INITIAL_NOTE_COUNT = 1000; /** @todo Maybe make an environment variable. */
+
 	const defaultFilters = {
+		limit: INITIAL_NOTE_COUNT,
 		kinds: [1, 36820] as any[],
 		'#t': ['hitchmap']
+		// This will result in too few results.
+		// '#g': [...'0123456789bcdefghjkmnpqrstuvwxyz']
 	};
 
-	let isLoadingNotes = $state(true);
-	let isLoadingInBackground = $state(false);
+	let loadingState = $state<'loading' | 'background' | null>('loading');
 
-	let notesOnMap = $state.raw({
+	const INITIAL_NOTES_STATE = {
 		type: 'FeatureCollection' as const,
 		features: [] as any[]
-	});
+	};
+
+	let notesOnMap = $state.raw(INITIAL_NOTES_STATE);
 
 	let clickedFeature: any | null | undefined = $state();
 
 	const workerManager = new EventProcessorWorkerManager();
-	const INITIAL_NOTE_COUNT = 1000; /** @todo Maybe make an environment variable. */
 	let eventsToProcess = $state(0);
 	let processedEvents = $state(0);
-	let initialBatchCount = 0;
 
 	let backgroundWorker: Worker | null = null;
 	let hasBackgroundWorkerFinished = $state(false);
-
 	let collectedBackgroundEvents = $state([] as any[]);
+
+	let debounceTimeout: any;
+	let debouncedNotes: typeof notesOnMap = INITIAL_NOTES_STATE;
 
 	const processEvent = async (
 		event: NDKEvent | NDKRawEvent,
@@ -48,16 +54,19 @@
 				: false;
 
 		if (processedEvent && !isDuplicate) {
-			notesOnMap = {
-				...notesOnMap,
-				features: [...notesOnMap.features, processedEvent]
+			debouncedNotes = {
+				...debouncedNotes,
+				features: [...debouncedNotes.features, processedEvent]
 			};
-			initialBatchCount++;
-
-			if (initialBatchCount === INITIAL_NOTE_COUNT) {
-				isLoadingNotes = false;
-			}
 		}
+
+		if (debounceTimeout) clearTimeout(debounceTimeout);
+		debounceTimeout = setTimeout(() => {
+			if (loadingState === 'loading' && processedEvents >= eventsToProcess) {
+				loadingState = null;
+				notesOnMap = debouncedNotes;
+			}
+		}, 1000);
 	};
 
 	const BACKGROUND_WORKER_DELAY_MS = 1000;
@@ -65,7 +74,7 @@
 	$effect(() => {
 		if (
 			!localStorage.getItem('initialLoadDone') &&
-			!isLoadingNotes &&
+			loadingState !== 'loading' &&
 			!backgroundWorker &&
 			!hasBackgroundWorkerFinished
 		) {
@@ -74,7 +83,7 @@
 			);
 
 			setTimeout(() => {
-				isLoadingInBackground = true;
+				loadingState = 'background';
 
 				backgroundWorker = new Worker(new URL('$lib/noteLoader.worker.ts', import.meta.url), {
 					type: 'module'
@@ -99,7 +108,7 @@
 						console.log('Background note loading completed');
 						processedEvents = 0;
 						eventsToProcess = collectedBackgroundEvents.length;
-						isLoadingNotes = true;
+						loadingState = 'loading';
 
 						for (const rawEvent of $state.snapshot(collectedBackgroundEvents)) {
 							await processEvent(rawEvent, { count: false, deduplicate: true });
@@ -109,8 +118,7 @@
 						backgroundWorker?.terminate();
 						backgroundWorker = null;
 						hasBackgroundWorkerFinished = true;
-						isLoadingInBackground = false;
-						isLoadingNotes = false;
+						loadingState = null;
 						localStorage.setItem('initialLoadDone', 'true');
 					}
 				};
@@ -119,30 +127,20 @@
 	});
 
 	onMount(async () => {
-		const sub = ndk.subscribe(
-			{
-				limit: INITIAL_NOTE_COUNT,
-				...defaultFilters
-				// This will result in too few results.
-				// '#g': [...'0123456789bcdefghjkmnpqrstuvwxyz']
-			},
+		ndk.subscribe(
+			defaultFilters,
 			{
 				closeOnEose: false,
 				cacheUnconstrainFilter: ['limit']
 			},
 			{
 				onEvents: (events) => {
-					console.log(`Received initial batch of ${events.length} notes from cache.`);
 					for (const event of events) {
 						processEvent(event);
 					}
 				},
 				onEvent: (event, relay) => {
-					console.debug('Received new note event from relay: ', event, relay?.url ?? 'CACHE');
 					processEvent(event);
-				},
-				onEose: () => {
-					console.log('Finished loading notes – listening...');
 				}
 			}
 		);
@@ -150,10 +148,10 @@
 </script>
 
 <MapOverlays
-	{isLoadingNotes}
+	isLoadingNotes={loadingState === 'loading'}
+	isLoadingInBackground={loadingState === 'background'}
 	{processedEvents}
 	{eventsToProcess}
-	{isLoadingInBackground}
 	{collectedBackgroundEvents}
 	{clickedFeature}
 	{map}
