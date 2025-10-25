@@ -3,9 +3,15 @@
 	import MapOverlays from '$lib/components/MapOverlays.svelte';
 	import { EventProcessorWorkerManager } from '$lib/eventProcessor';
 	import { ndk } from '$lib/ndk.svelte';
+	import type { NDKEvent, NDKRawEvent } from '@nostr-dev-kit/ndk';
 	import { onMount } from 'svelte';
 
 	let map = $state<maplibregl.Map | undefined>(undefined);
+
+	const defaultFilters = {
+		kinds: [1, 36820] as any[],
+		'#t': ['hitchmap']
+	};
 
 	let isLoadingNotes = $state(true);
 	let isLoadingInBackground = $state(false);
@@ -28,16 +34,20 @@
 
 	let collectedBackgroundEvents = $state([] as any[]);
 
-	const processEvent = async (event: any, opts: { background?: boolean } = {}) => {
-		if (!opts.background) eventsToProcess++;
-
+	const processEvent = async (
+		event: NDKEvent | NDKRawEvent,
+		{ count, deduplicate }: { count?: boolean; deduplicate?: boolean } = {}
+	) => {
+		if (count ?? true) eventsToProcess++;
 		const processedEvent = await workerManager.processWithWorker(event);
 		processedEvents++;
 
-		if (
-			processedEvent &&
-			!notesOnMap.features.some((f: any) => f.properties?.id === processedEvent.properties?.id)
-		) {
+		const isDuplicate =
+			(deduplicate ?? false)
+				? notesOnMap.features.some((f: any) => f.properties?.id === processedEvent?.properties?.id)
+				: false;
+
+		if (processedEvent && !isDuplicate) {
 			notesOnMap = {
 				...notesOnMap,
 				features: [...notesOnMap.features, processedEvent]
@@ -70,19 +80,31 @@
 					type: 'module'
 				});
 
-				backgroundWorker.onmessage = async (event) => {
-					const { type, events } = event.data;
-					if (type === 'batch') {
-						console.log(`Background worker sent batch of ${events.length} events.`);
-						collectedBackgroundEvents.push(...events);
-					} else if (type === 'done') {
+				backgroundWorker.onmessage = async ({
+					data: { type, ...event }
+				}: {
+					data: { type: 'log' | 'batch' | 'done'; message?: string; items?: string };
+				}) => {
+					if (type === 'log') {
+						console.log(event.message);
+						return;
+					}
+
+					if (type === 'batch' && event.items) {
+						collectedBackgroundEvents.push(...(JSON.parse(event.items) as NDKRawEvent[]));
+						return;
+					}
+
+					if (type === 'done') {
+						console.log('Background note loading completed');
 						processedEvents = 0;
 						eventsToProcess = collectedBackgroundEvents.length;
 						isLoadingNotes = true;
-						console.log('Background note loading completed');
+
 						for (const rawEvent of $state.snapshot(collectedBackgroundEvents)) {
-							await processEvent(rawEvent, { background: true });
+							await processEvent(rawEvent, { count: false, deduplicate: true });
 						}
+
 						collectedBackgroundEvents = [];
 						backgroundWorker?.terminate();
 						backgroundWorker = null;
@@ -100,8 +122,7 @@
 		const sub = ndk.subscribe(
 			{
 				limit: INITIAL_NOTE_COUNT,
-				kinds: [1, 36820] as any[],
-				'#t': ['hitchmap']
+				...defaultFilters
 				// This will result in too few results.
 				// '#g': [...'0123456789bcdefghjkmnpqrstuvwxyz']
 			},
@@ -111,19 +132,20 @@
 			},
 			{
 				onEvents: (events) => {
+					console.log(`Received initial batch of ${events.length} notes from cache.`);
 					for (const event of events) {
 						processEvent(event);
 					}
 				},
-				onEvent: (event) => {
+				onEvent: (event, relay) => {
+					console.debug('Received new note event from relay: ', event, relay?.url ?? 'CACHE');
 					processEvent(event);
+				},
+				onEose: () => {
+					console.log('Finished loading notes – listening...');
 				}
 			}
 		);
-
-		sub.on('eose', (relay: any) => {
-			console.log('Finished loading notes – listening...');
-		});
 	});
 </script>
 
