@@ -30,29 +30,31 @@ export const ndk = new NDK({
 const BATCH_SIZE = 500;
 
 (async () => {
-	await ndk.connect();
-
-	const sub = ndk.subscribe({
-		kinds: [1, 36820] as any[],
-		'#t': ['hitchmap'],
-		limit: 99999
-	});
+	await ndk
+		.connect()
+		.then(() => self.postMessage({ type: 'log', message: 'Web Worker: NDK Connected' }));
 
 	const events: any[] = [];
-
-	sub.on('event', (event) => {
-		events.push(event.rawEvent());
-		if (events.length >= BATCH_SIZE) {
-			self.postMessage({ type: 'batch', events: events.splice(0, BATCH_SIZE) });
+	ndk.subscribe(
+		{
+			kinds: [1, 36820] as any[],
+			'#t': ['hitchmap'],
+			limit: 1000
+		},
+		{
+			cacheUsage: NDKSubscriptionCacheUsage.ONLY_RELAY,
+			onEvent: (event) => {
+				events.push(event.rawEvent());
+				if (events.length >= BATCH_SIZE) {
+					self.postMessage({ type: 'batch', items: JSON.stringify(events.splice(0, BATCH_SIZE)) });
+				}
+			},
+			onEose: () => {
+				if (events.length > 0) {
+					self.postMessage({ type: 'batch', items: JSON.stringify(events.splice(0)) });
+				}
+				self.postMessage({ type: 'done' });
+			}
 		}
-	});
-
-	sub.on('eose', () => {
-		if (events.length > 0) {
-			self.postMessage({ type: 'batch', events: events.splice(0) });
-		}
-		self.postMessage({ type: 'done' });
-	});
-
-	sub.start();
+	);
 })();
