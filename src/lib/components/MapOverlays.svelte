@@ -221,7 +221,7 @@
 		time?: number;
 		user?: any;
 	})}
-		{@const username = entry.username ?? entry.user?.name ?? 'Anonymous'}
+		{@const username = entry.username ?? entry.user?.name ?? 'Anonymous z'}
 		<div class="space-y-3 border-b border-gray-300 last-of-type:border-0">
 			<div>{entry.content}</div>
 			<details class="space-y-4">
@@ -236,7 +236,7 @@
 												class="text-blue-500 hover:underline"
 												onclick={() => openProfileModal(profile, entry.pubkey!)}
 											>
-												{username ?? profile?.name ?? 'Anonymous'}
+												{profile?.name ?? username ?? 'Anonymous'}
 											</button>
 										{:else}
 											{username ?? 'Anonymous'}
@@ -252,9 +252,11 @@
 					{/if}
 					<span class="cursor-pointer text-xs text-gray-400">Show raw data</span>
 				</summary>
-				<pre class="bg-gray-100 p-2 text-xs whitespace-pre-wrap">
-					{JSON.stringify(entry, null, 2)}
-				</pre>
+				<pre class="bg-gray-100 p-2 text-xs whitespace-pre-wrap">{JSON.stringify(
+						entry,
+						null,
+						2
+					)}</pre>
 			</details>
 		</div>
 	{/snippet}
