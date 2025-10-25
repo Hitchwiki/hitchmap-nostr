@@ -1,25 +1,21 @@
 import NDKCacheAdapterSqliteWasm from '@nostr-dev-kit/cache-sqlite-wasm';
 import type { NDKCacheAdapter } from '@nostr-dev-kit/ndk';
-import NDK, { NDKSubscriptionCacheUsage } from '@nostr-dev-kit/ndk';
+import NDK from '@nostr-dev-kit/ndk';
+import { DEFAULT_RELAYS } from './ndk.svelte';
 
 const BASE_PATH = import.meta.env.DEV ? '/' : '/hitchmap-nostr/';
+const BATCH_SIZE = 500;
+const LIMIT = 5000; //Number.MAX_SAFE_INTEGER; // 9007199254740991
 
-let cacheAdapter: NDKCacheAdapter | undefined = new NDKCacheAdapterSqliteWasm({
+let selectedRelayUrls = new Set(DEFAULT_RELAYS);
+export const availableRelays = DEFAULT_RELAYS;
+
+let cacheAdapter: NDKCacheAdapter = new NDKCacheAdapterSqliteWasm({
 	dbName: 'hitchmap-ndk',
 	useWorker: true,
 	workerUrl: `${BASE_PATH}wasm/worker.js`,
 	wasmUrl: `${BASE_PATH}wasm/sql-wasm.wasm`
 }) as any;
-
-self.postMessage({
-	type: 'log',
-	message: `Web Worker: Setting up NDK Sqlite WASM Cache Adapter, ${cacheAdapter ? 'success' : 'failed'} – ${JSON.stringify(cacheAdapter)}`
-});
-
-const DEFAULT_RELAYS = ['wss://relay.nomadwiki.org', 'wss://relay.trustroots.org'];
-
-let selectedRelayUrls = new Set(DEFAULT_RELAYS);
-export const availableRelays = DEFAULT_RELAYS;
 
 export const ndk = new NDK({
 	explicitRelayUrls: Array.from(selectedRelayUrls),
@@ -27,34 +23,24 @@ export const ndk = new NDK({
 	cacheAdapter
 });
 
-const BATCH_SIZE = 500;
-
 (async () => {
 	await ndk
 		.connect()
 		.then(() => self.postMessage({ type: 'log', message: 'Web Worker: NDK Connected' }));
+		
+	cacheAdapter.initializeAsync?.(ndk);
 
-	const events: any[] = [];
-	ndk.subscribe(
-		{
-			kinds: [1, 36820] as any[],
-			'#t': ['hitchmap'],
-			limit: 1000
-		},
-		{
-			cacheUsage: NDKSubscriptionCacheUsage.ONLY_RELAY,
-			onEvent: (event) => {
-				events.push(event.rawEvent());
-				if (events.length >= BATCH_SIZE) {
-					self.postMessage({ type: 'batch', items: JSON.stringify(events.splice(0, BATCH_SIZE)) });
-				}
-			},
-			onEose: () => {
-				if (events.length > 0) {
-					self.postMessage({ type: 'batch', items: JSON.stringify(events.splice(0)) });
-				}
-				self.postMessage({ type: 'done' });
-			}
-		}
-	);
+	/** @todo Check if with new fixes, the subscription will work again (allows us to communicate progress) */
+	const events = await ndk.fetchEvents({
+		kinds: [1, 36820] as any[],
+		'#t': ['hitchmap'],
+		limit: LIMIT
+	});
+
+	let batchedEvents = [];
+	for (const event of events) {
+		batchedEvents.push(event.rawEvent());
+	}
+
+	self.postMessage({ type: 'done', items: JSON.stringify(batchedEvents) });
 })();

@@ -16,7 +16,6 @@
 		processedEvents,
 		eventsToProcess,
 		isLoadingInBackground,
-		collectedBackgroundEvents,
 		clickedFeature,
 		map
 	}: {
@@ -24,7 +23,6 @@
 		processedEvents: number;
 		eventsToProcess: number;
 		isLoadingInBackground: boolean;
-		collectedBackgroundEvents: any[];
 		clickedFeature: any;
 		map: maplibregl.Map | undefined;
 	} = $props();
@@ -167,7 +165,9 @@
 					Edit Profile
 				</button>
 				<!-- Reset/Sign out -->
-				<button class="ml-2 text-red-500 hover:underline" onclick={onResetSigner}> Sign out </button>
+				<button class="ml-2 text-red-500 hover:underline" onclick={onResetSigner}>
+					Sign out
+				</button>
 			</div>
 		{:else}
 			<div class="flex flex-row gap-1 text-nowrap">
@@ -182,11 +182,7 @@
 		>
 			<span class="size-2 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600"
 			></span>
-			<span
-				>Loading more notes... {@html collectedBackgroundEvents.length > 0
-					? `<span class="opacity-50">${collectedBackgroundEvents.length}...</span>`
-					: ''}</span
-			>
+			<span>Loading more notes... </span>
 		</div>
 	{/if}
 

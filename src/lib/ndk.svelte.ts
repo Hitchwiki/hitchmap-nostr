@@ -12,11 +12,11 @@ if (typeof window !== 'undefined') {
 		dbName: 'hitchmap-ndk',
 		useWorker: true,
 		workerUrl: `${BASE_PATH}wasm/worker.js`,
-		wasmUrl: `${BASE_PATH}wasm/sql-wasm.wasm`
+		wasmUrl: `${BASE_PATH}wasm/sql-wasm.wasm`,
 	}) as any;
 }
 
-const DEFAULT_RELAYS = ['wss://relay.nomadwiki.org', 'wss://relay.trustroots.org'];
+export const DEFAULT_RELAYS = ['wss://relay.nomadwiki.org', 'wss://relay.trustroots.org'];
 
 let selectedRelayUrls = new SvelteSet(DEFAULT_RELAYS);
 export const availableRelays = DEFAULT_RELAYS;
@@ -80,8 +80,8 @@ export async function resetSigner() {
 	if (typeof window === 'undefined') return;
 
 	if (cacheAdapter) {
-		console.log('Initializing NDK Sqlite WASM Cache Adapter');
-		await cacheAdapter?.initialize?.(ndk);
+		console.log(`Setting up NDK Sqlite WASM Cache Adapter, ${cacheAdapter ? 'success' : 'failed'} – ${JSON.stringify(cacheAdapter)}`);
+		await cacheAdapter?.initializeAsync?.(ndk);
 	}
 
 	ndk.connect().then(() => console.log('NDK Connected'));

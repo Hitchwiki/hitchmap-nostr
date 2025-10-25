@@ -3,7 +3,7 @@
 	import MapOverlays from '$lib/components/MapOverlays.svelte';
 	import { EventProcessorWorkerManager } from '$lib/eventProcessor';
 	import { ndk } from '$lib/ndk.svelte';
-	import type { NDKEvent, NDKRawEvent } from '@nostr-dev-kit/ndk';
+	import { type NDKEvent, type NDKRawEvent } from '@nostr-dev-kit/ndk';
 	import { onMount } from 'svelte';
 
 	let map = $state<maplibregl.Map | undefined>(undefined);
@@ -35,29 +35,32 @@
 
 	let backgroundWorker: Worker | null = null;
 	let hasBackgroundWorkerFinished = $state(false);
-	let collectedBackgroundEvents = $state([] as any[]);
 
 	let debounceTimeout: any;
 	let debouncedNotes: typeof notesOnMap = INITIAL_NOTES_STATE;
 
 	const processEvent = async (
 		event: NDKEvent | NDKRawEvent,
-		{ count, deduplicate }: { count?: boolean; deduplicate?: boolean } = {}
+		{ deduplicate }: { deduplicate?: boolean } = {}
 	) => {
-		if (count ?? true) eventsToProcess++;
+		eventsToProcess++;
 		const processedEvent = await workerManager.processWithWorker(event);
 		processedEvents++;
 
-		const isDuplicate =
-			(deduplicate ?? false)
-				? notesOnMap.features.some((f: any) => f.properties?.id === processedEvent?.properties?.id)
-				: false;
+		if (processedEvent) {
+			const isDuplicate =
+				(deduplicate ?? false)
+					? notesOnMap.features.some(
+							(f: any) => f.properties?.id === processedEvent?.properties?.id
+						)
+					: false;
 
-		if (processedEvent && !isDuplicate) {
-			debouncedNotes = {
-				...debouncedNotes,
-				features: [...debouncedNotes.features, processedEvent]
-			};
+			if (!isDuplicate) {
+				debouncedNotes = {
+					...debouncedNotes,
+					features: [...debouncedNotes.features, processedEvent]
+				};
+			}
 		}
 
 		if (debounceTimeout) clearTimeout(debounceTimeout);
@@ -66,6 +69,7 @@
 				loadingState = null;
 				notesOnMap = debouncedNotes;
 			}
+			debounceTimeout = null;
 		}, 1000);
 	};
 
@@ -92,33 +96,26 @@
 				backgroundWorker.onmessage = async ({
 					data: { type, ...event }
 				}: {
-					data: { type: 'log' | 'batch' | 'done'; message?: string; items?: string };
+					data: { type: 'log' | 'done'; message?: string; items?: string };
 				}) => {
 					if (type === 'log') {
 						console.log(event.message);
 						return;
 					}
 
-					if (type === 'batch' && event.items) {
-						collectedBackgroundEvents.push(...(JSON.parse(event.items) as NDKRawEvent[]));
-						return;
-					}
-
-					if (type === 'done') {
+					if (type === 'done' && event.items) {
 						console.log('Background note loading completed');
-						processedEvents = 0;
-						eventsToProcess = collectedBackgroundEvents.length;
 						loadingState = 'loading';
+						eventsToProcess = 0;
+						processedEvents = 0;
 
-						for (const rawEvent of $state.snapshot(collectedBackgroundEvents)) {
-							await processEvent(rawEvent, { count: false, deduplicate: true });
+						for (const rawEvent of JSON.parse(event.items) as NDKRawEvent[]) {
+							await processEvent(rawEvent, { deduplicate: true });
 						}
 
-						collectedBackgroundEvents = [];
 						backgroundWorker?.terminate();
 						backgroundWorker = null;
 						hasBackgroundWorkerFinished = true;
-						loadingState = null;
 						localStorage.setItem('initialLoadDone', 'true');
 					}
 				};
@@ -152,7 +149,6 @@
 	isLoadingInBackground={loadingState === 'background'}
 	{processedEvents}
 	{eventsToProcess}
-	{collectedBackgroundEvents}
 	{clickedFeature}
 	{map}
 />
