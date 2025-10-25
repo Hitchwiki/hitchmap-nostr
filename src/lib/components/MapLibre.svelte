@@ -32,6 +32,16 @@
 		map: maplibregl.Map | undefined;
 	} = $props();
 
+	let filteredData = $derived.by(() => {
+		const activeKinds = DEFAULT_KINDS;
+		return {
+			...data,
+			features: data.features.filter((feature: any) =>
+				activeKinds.includes(feature.properties.kind)
+			)
+		};
+	});
+
 	// Constants and helpers for styling
 	const MAX_ZOOM = 14;
 
@@ -81,7 +91,7 @@
 >
 	<GeoJSON
 		id="notes"
-		{data}
+		data={filteredData}
 		cluster={{
 			radius: 75,
 			properties: {
