@@ -10,6 +10,11 @@ const LIMIT = Number.MAX_SAFE_INTEGER; // 9007199254740991
 let selectedRelayUrls = new Set(DEFAULT_RELAYS);
 export const availableRelays = DEFAULT_RELAYS;
 
+/** 
+ * @todo The problem with the cache in the background worker seems to be either: 
+ * a) the IndexedDB is persisted only after the final save in SQLite is done; this might take a while.
+ * b) a cache needs to be properly initialized before the background worker runs (i.e. reload once?)
+ * */
 let cacheAdapter: NDKCacheAdapter = new NDKCacheAdapterSqliteWasm({
 	dbName: 'hitchmap-ndk',
 	useWorker: true,
