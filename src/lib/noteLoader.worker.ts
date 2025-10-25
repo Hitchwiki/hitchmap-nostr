@@ -1,20 +1,20 @@
 import NDKCacheAdapterSqliteWasm from '@nostr-dev-kit/cache-sqlite-wasm';
 import type { NDKCacheAdapter } from '@nostr-dev-kit/ndk';
-import NDK from '@nostr-dev-kit/ndk';
+import NDK, { NDKSubscriptionCacheUsage } from '@nostr-dev-kit/ndk';
 
 const BASE_PATH = import.meta.env.DEV ? '/' : '/hitchmap-nostr/';
 
-let cacheAdapter: NDKCacheAdapter | undefined;
+let cacheAdapter: NDKCacheAdapter | undefined = new NDKCacheAdapterSqliteWasm({
+	dbName: 'hitchmap-ndk',
+	useWorker: true,
+	workerUrl: `${BASE_PATH}wasm/worker.js`,
+	wasmUrl: `${BASE_PATH}wasm/sql-wasm.wasm`
+}) as any;
 
-/** @todo Clearly, this cache is either not the same as in the main thread or not being used */
-if (typeof window !== 'undefined') {
-	cacheAdapter = new NDKCacheAdapterSqliteWasm({
-		dbName: 'hitchmap-ndk',
-		useWorker: true,
-		workerUrl: `${BASE_PATH}wasm/worker.js`,
-		wasmUrl: `${BASE_PATH}wasm/sql-wasm.wasm`
-	}) as any;
-}
+self.postMessage({
+	type: 'log',
+	message: `Web Worker: Setting up NDK Sqlite WASM Cache Adapter, ${cacheAdapter ? 'success' : 'failed'} – ${JSON.stringify(cacheAdapter)}`
+});
 
 const DEFAULT_RELAYS = ['wss://relay.nomadwiki.org', 'wss://relay.trustroots.org'];
 
@@ -26,17 +26,6 @@ export const ndk = new NDK({
 	autoConnectUserRelays: true,
 	cacheAdapter
 });
-
-(async () => {
-	if (typeof window === 'undefined') return;
-
-	if (cacheAdapter) {
-		console.log('Initializing NDK Sqlite WASM Cache Adapter');
-		await cacheAdapter?.initialize?.(ndk);
-	}
-
-	ndk.connect().then(() => console.log('NDK Connected'));
-})();
 
 const BATCH_SIZE = 500;
 
