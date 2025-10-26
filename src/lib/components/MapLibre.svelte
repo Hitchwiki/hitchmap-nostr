@@ -33,13 +33,45 @@
 		map: maplibregl.Map | undefined;
 	} = $props();
 
+	// Read filters from search params
+	let searchParams = $derived.by(() => {
+		if (typeof window === 'undefined') return new URLSearchParams();
+		return new URLSearchParams(window.location.search);
+	});
+
+	let activeKinds = $derived.by(() => {
+		const kindsParam = searchParams.get('kinds');
+		if (kindsParam) {
+			return kindsParam
+				.split(',')
+				.map((k) => k.trim())
+				.filter(Boolean);
+		}
+		return DEFAULT_KINDS;
+	});
+
+	let minRating = $derived.by(() => {
+		const ratingParam = searchParams.get('minRating');
+		return ratingParam ? Number(ratingParam) : undefined;
+	});
+
+	let usernameFilter = $derived.by(() => {
+		const username = searchParams.get('username');
+		return username ? username.toLowerCase() : undefined;
+	});
+
 	let filteredData = $derived.by(() => {
-		const activeKinds = DEFAULT_KINDS;
 		return {
 			...data,
-			features: data.features.filter((feature: any) =>
-				activeKinds.includes(feature.properties.kind)
-			)
+			features: data.features.filter((feature: any) => {
+				const { kind, rating, username } = feature.properties;
+				// @ts-expect-error
+				if (!activeKinds.includes(kind)) return false;
+				if (minRating !== undefined && (rating ?? 0) < minRating) return false;
+				if (usernameFilter && (!username || username.toLowerCase() !== usernameFilter))
+					return false;
+				return true;
+			})
 		};
 	});
 
