@@ -242,8 +242,29 @@
 
 		<CircleLayer
 			applyToClusters={false}
-			onclick={(e: LayerClickInfo<Feature<Geometry, SingleProperties>>) =>
-				onClick(e.features?.[0]?.properties)}
+			onclick={(e: LayerClickInfo<Feature<Geometry, SingleProperties>>) => {
+				const props = e.features?.[0]?.properties;
+				if (!props) return;
+				const parsed = Object.fromEntries(
+					Object.entries(props).map(([key, value]) => {
+						try {
+							// Try to parse JSON, fallback to number, else keep as is
+							if (typeof value === 'string') {
+								try {
+									return [key, JSON.parse(value)];
+								} catch {
+									const num = Number(value);
+									return [key, isNaN(num) ? value : num];
+								}
+							}
+							return [key, value];
+						} catch {
+							return [key, value];
+						}
+					})
+				);
+				onClick(parsed as any);
+			}}
 			hoverCursor="pointer"
 			paint={{
 				'circle-color': createPointColor('rating'),
