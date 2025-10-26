@@ -1,3 +1,5 @@
+import type { NDKEvent, NDKRawEvent } from '@nostr-dev-kit/ndk';
+
 export interface LocationData {
 	latitude: number;
 	longitude: number;
@@ -45,4 +47,5 @@ export type SingleProperties = {
 	coordinates: [number, number];
 	tags: any[];
 	rating?: number;
+	rawEvent: NDKEvent | NDKRawEvent;
 };

@@ -6,6 +6,7 @@
 		resetSigner,
 		signer as signerState
 	} from '$lib/ndk.svelte';
+	import type { SingleProperties } from '$lib/processors/types';
 	import { NDKSubscriptionCacheUsage, type NDKUserProfile } from '@nostr-dev-kit/ndk';
 	import { type GeoJSONSource } from 'maplibre-gl';
 	import { onMount } from 'svelte';
@@ -214,13 +215,7 @@
 		</div>
 	{/snippet}
 
-	{#snippet note(entry: {
-		pubkey?: string;
-		username?: string;
-		content: string;
-		time?: number;
-		user?: any;
-	})}
+	{#snippet note(entry: SingleProperties)}
 		{@const username =
 			(entry.username ?? entry.user?.name ?? typeof entry.user === 'string')
 				? entry.user
@@ -261,7 +256,7 @@
 					<span class="cursor-pointer text-xs text-gray-400">Show raw data</span>
 				</summary>
 				<pre class="bg-gray-100 p-2 text-xs whitespace-pre-wrap">{JSON.stringify(
-						entry,
+						Object.fromEntries(Object.entries(entry.rawEvent).reverse()),
 						null,
 						2
 					)}</pre>
@@ -296,7 +291,6 @@
 					return allChildren.sort((a, b) => b.properties.time - a.properties.time);
 				})()}
 					<h2 class="font-bold">Cluster ({clickedFeature.point_count} points)</h2>
-					<h3 class="font-bold">Comments</h3>
 					<p>Loading...</p>
 				{:then children}
 					<details class="mb-4">
@@ -321,6 +315,8 @@
 							{#if child.properties?.content && child.properties.content.trim() !== ''}
 								{@render note(child.properties as any)}
 							{/if}
+						{:else}
+							<p class="text-gray-600 italic">No content available for this point.</p>
 						{/each}
 					</div>
 					{#if children.length < clickedFeature.point_count}
@@ -337,9 +333,7 @@
 				{/await}
 			{:else}
 				{@render overview(clickedFeature.rating, undefined, undefined)}
-				{@render note({
-					...clickedFeature
-				} as any)}
+				{@render note(clickedFeature as any)}
 			{/if}
 		</div>
 	{/if}

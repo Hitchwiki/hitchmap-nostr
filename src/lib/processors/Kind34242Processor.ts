@@ -58,7 +58,8 @@ export class Kind34242Processor extends IEventProcessor {
 					geohash: geohash || undefined,
 					coordinates,
 					tags: event.tags,
-					rating: undefined
+					rating: undefined,
+					rawEvent: event,
 				}
 			};
 		}
@@ -109,7 +110,8 @@ export class Kind34242Processor extends IEventProcessor {
 				geohash: undefined, // Could compute if needed
 				coordinates,
 				tags: event.tags,
-				rating: rideData.rating
+				rating: rideData.rating,
+				rawEvent: event,
 			}
 		};
 	}

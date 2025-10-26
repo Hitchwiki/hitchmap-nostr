@@ -49,6 +49,7 @@ export class Kind36820Processor extends DefaultProcessor {
 				coordinates: coordinates.lngLat,
 				tags: event.tags,
 				rating,
+				rawEvent: event,
 			}
 		};
 	}

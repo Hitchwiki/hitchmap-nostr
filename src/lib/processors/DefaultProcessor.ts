@@ -41,6 +41,7 @@ export class DefaultProcessor extends IEventProcessor {
 				coordinates: coordinates.lngLat,
 				tags: event.tags,
 				rating,
+				rawEvent: event,
 			}
 		};
 	}
