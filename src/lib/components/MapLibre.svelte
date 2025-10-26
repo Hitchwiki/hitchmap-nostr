@@ -38,64 +38,53 @@
 		new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
 	);
 
-	// Define filter extractors
-	const filterExtractors = {
-		kinds: () => {
-			const kindsParam = searchParams.get('kinds');
-			return kindsParam
-				? kindsParam
-						.split(',')
-						.map((k) => k.trim())
-						.filter(Boolean)
-				: DEFAULT_KINDS;
+	// Combined filter functions for search params
+	const filterFunctions = $derived.by(() => [
+		// Filter by kind
+		(f: any) => {
+			const kinds: number[] =
+				searchParams
+					.get('kinds')
+					?.split(',')
+					.map((k) => Number(k.trim())) || DEFAULT_KINDS;
+			return kinds.includes(f.properties.kind);
 		},
-		minRating: () => {
-			const ratingParam = searchParams.get('minRating');
-			return ratingParam ? Number(ratingParam) : undefined;
+		// Filter by minRating
+		(f: any) => {
+			const min = Number(searchParams.get('minRating'));
+			return !min || (f.properties.rating ?? 0) >= min;
 		},
-		username: () => {
-			const username = searchParams.get('username');
-			return username ? username.toLowerCase() : undefined;
+		// Filter by username
+		(f: any) => {
+			const filter = searchParams.get('username')?.toLowerCase();
+			if (!filter) return true;
+			const name =
+				f.properties.username ?? (typeof f.properties.user === 'string' ? f.properties.user : '');
+			return name?.toLowerCase() === filter;
 		},
-		content: () => {
-			const content = searchParams.get('content');
-			return content ? content.toLowerCase() : undefined;
+		// Filter by content
+		(f: any) => {
+			const filter = searchParams.get('content')?.toLowerCase();
+			return !filter || f.properties.content?.toLowerCase().includes(filter);
+		},
+		// Filter by minimum content length
+		(f: any) => {
+			const minLength = Number(searchParams.get('minContentLength'));
+			return !minLength || (f.properties.content?.length ?? 0) >= minLength;
+		},
+		// Filter by maximum content length
+		(f: any) => {
+			const maxLength = Number(searchParams.get('maxContentLength'));
+			return !maxLength || (f.properties.content?.length ?? 0) <= maxLength;
 		}
-	};
+	]);
 
-	let activeKinds = $derived.by(() => filterExtractors.kinds());
-	let minRating = $derived.by(() => filterExtractors.minRating());
-	let usernameFilter = $derived.by(() => filterExtractors.username());
-	let contentFilter = $derived.by(() => filterExtractors.content());
-
-	// Define filter functions for extensibility
-	const filterFunctions = [
-		(feature: any) => {
-			const { kind } = feature.properties;
-			// @ts-expect-error
-			return activeKinds.includes(kind);
-		},
-		(feature: any) => {
-			const { rating } = feature.properties;
-			return minRating === undefined || (rating ?? 0) >= minRating;
-		},
-		(feature: any) => {
-			const { username, user } = feature.properties;
-			if (!usernameFilter) return true;
-			const userNameValue = username ?? (typeof user === 'string' ? user : undefined);
-			return userNameValue && userNameValue.toLowerCase() === usernameFilter;
-		},
-		(feature: any) => {
-			const { content } = feature.properties;
-			if (!contentFilter) return true;
-			return content && content.toLowerCase().includes(contentFilter);
-		}
-	];
-
-	let filteredData = $derived.by(() => {
+	const filteredData = $derived.by(() => {
 		return {
 			...data,
-			features: data.features.filter((feature: any) => filterFunctions.every((fn) => fn(feature)))
+			features: data.features.filter((feature: any) =>
+				filterFunctions.every((fn: (f: any) => boolean) => fn(feature))
+			)
 		};
 	});
 
