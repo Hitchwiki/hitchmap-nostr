@@ -9,7 +9,13 @@
 
 	let map = $state<maplibregl.Map | undefined>(undefined);
 
-	const INITIAL_NOTE_COUNT = 250; /** @todo Maybe make an environment variable. */
+	let searchParams = $derived(
+		new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
+	);
+
+	const INITIAL_NOTE_COUNT = $derived(
+		Number(searchParams.get('limit') || 250)
+	); /** @todo Maybe make an environment variable. */
 
 	let loadingState = $state<'loading' | 'background' | null>('loading');
 
