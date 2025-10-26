@@ -32,7 +32,7 @@ export const ndk = new NDK({
 		.connect()
 		.then(() => self.postMessage({ type: 'log', message: 'Web Worker: NDK Connected' }));
 
-	cacheAdapter.initializeAsync?.(ndk);
+	await cacheAdapter.initializeAsync?.(ndk);
 
 	/** @todo Check if with new fixes, the subscription will work again (allows us to communicate progress) */
 	const events = await ndk.fetchEvents({
