@@ -111,10 +111,7 @@
 	];
 
 	// Determine whether to use average rating for cluster coloring based on search param
-	const USE_AVERAGE_RATING_FOR_CLUSTERS = $derived(
-		typeof window === 'undefined' ||
-			new URLSearchParams(window.location.search).has('averageClusterColoring')
-	);
+	const USE_AVERAGE_RATING_FOR_CLUSTERS = $derived(searchParams.has('averageClusterColoring'));
 
 	const createPointColor = (ratingAttribute: string | typeof CALCULATE_AVERAGE_RATING) => {
 		return [
