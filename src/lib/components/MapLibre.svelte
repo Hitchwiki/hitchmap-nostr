@@ -64,11 +64,12 @@
 		return {
 			...data,
 			features: data.features.filter((feature: any) => {
-				const { kind, rating, username } = feature.properties;
+				const { kind, rating, username, user } = feature.properties;
 				// @ts-expect-error
 				if (!activeKinds.includes(kind)) return false;
 				if (minRating !== undefined && (rating ?? 0) < minRating) return false;
-				if (usernameFilter && (!username || username.toLowerCase() !== usernameFilter))
+				const userNameValue = username ?? (typeof user === 'string' ? user : undefined);
+				if (usernameFilter && (!userNameValue || userNameValue.toLowerCase() !== usernameFilter))
 					return false;
 				return true;
 			})
