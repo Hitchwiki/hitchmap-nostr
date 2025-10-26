@@ -12,7 +12,6 @@ export class Kind34242Processor extends IEventProcessor {
 
 		let rideData: HitchhikingRide | null = null;
 		try {
-			console.log('Processing kind 34242 event:', event);
 			rideData = JSON.parse(event.content);
 		} catch (error) {
 			console.warn('Failed to parse JSON for kind 34242 event, treating as plain text:', error);
@@ -22,6 +21,7 @@ export class Kind34242Processor extends IEventProcessor {
 		if (!rideData) {
 			const location = this.extractLocation(event);
 			if (!location) return null;
+			
 			const { lngLat: coordinates, geohash } = location;
 			// Extract username if present in event.content
 			let content = event.content;
