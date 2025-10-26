@@ -102,9 +102,12 @@
 						eventsToProcess = 0;
 						processedEvents = 0;
 
-						for (const rawEvent of JSON.parse(event.items) as NDKRawEvent[]) {
-							await processEvent(rawEvent, { deduplicate: true });
-						}
+						// @todo Consider catching and logging errors
+						await Promise.allSettled(
+							JSON.parse(event.items).map((rawEvent: NDKRawEvent) =>
+								processEvent(rawEvent, { deduplicate: true })
+							)
+						);
 
 						backgroundWorker?.terminate();
 						backgroundWorker = null;
