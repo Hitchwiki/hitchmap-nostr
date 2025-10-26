@@ -57,7 +57,21 @@
 	const POINT_COUNT_THRESHOLD_1 = 50;
 	const POINT_COUNT_THRESHOLD_2 = 300;
 
-	const createPointColor = (ratingAttribute: string | (string | string[])[]) => {
+	// Helper expression to safely calculate average rating without dividing by zero
+	const CALCULATE_AVERAGE_RATING = [
+		'case',
+		['==', ['get', 'total_rating_count'], 0],
+		0,
+		['/', ['get', 'total_rating'], ['get', 'total_rating_count']]
+	];
+
+	// Determine whether to use average rating for cluster coloring based on search param
+	const USE_AVERAGE_RATING_FOR_CLUSTERS = $derived(
+		typeof window === 'undefined' ||
+			new URLSearchParams(window.location.search).has('averageClusterColoring')
+	);
+
+	const createPointColor = (ratingAttribute: string | typeof CALCULATE_AVERAGE_RATING) => {
 		return [
 			'interpolate',
 			['linear'],
@@ -108,21 +122,23 @@
 			hoverCursor="pointer"
 			manageHoverState
 			paint={{
-				'circle-color': [
-					'step',
-					['zoom'],
-					[
-						'step',
-						['get', 'point_count'],
-						'rgba(23, 106, 60, 0.9)', // green for <50, 70% opacity
-						POINT_COUNT_THRESHOLD_1,
-						'rgba(255, 152, 0, 0.9)', // orange for 50-300
-						POINT_COUNT_THRESHOLD_2,
-						'rgba(156, 47, 47, 0.9)' // red for >=300
-					],
-					MAX_ZOOM,
-					createPointColor(['/', ['get', 'total_rating'], ['get', 'total_rating_count']])
-				],
+				'circle-color': USE_AVERAGE_RATING_FOR_CLUSTERS
+					? createPointColor(CALCULATE_AVERAGE_RATING)
+					: [
+							'step',
+							['zoom'],
+							[
+								'step',
+								['get', 'point_count'],
+								'rgba(23, 106, 60, 0.9)', // green for <50, 70% opacity
+								POINT_COUNT_THRESHOLD_1,
+								'rgba(255, 152, 0, 0.9)', // orange for 50-300
+								POINT_COUNT_THRESHOLD_2,
+								'rgba(156, 47, 47, 0.9)' // red for >=300
+							],
+							MAX_ZOOM,
+							createPointColor(CALCULATE_AVERAGE_RATING)
+						],
 				'circle-radius': [
 					'step',
 					['zoom'],
@@ -143,21 +159,24 @@
 						SPOT_STROKE_WIDTH_HIGHLIGHTED
 					]
 				],
-				'circle-stroke-color': [
-					'step',
-					['zoom'],
-					[
-						'step',
-						['get', 'point_count'],
-						'rgba(23, 106, 60, 0.3)', // green stroke, 30% opacity
-						POINT_COUNT_THRESHOLD_1,
-						'rgba(255, 152, 0, 0.3)', // orange stroke
-						POINT_COUNT_THRESHOLD_2,
-						'rgba(156, 47, 47, 0.3)' // red stroke
-					],
-					MAX_ZOOM,
-					SPOT_STROKE_COLOR
-				]
+				'circle-stroke-opacity': 0.3, // 30% opacity for cluster strokes
+				'circle-stroke-color': USE_AVERAGE_RATING_FOR_CLUSTERS
+					? createPointColor(CALCULATE_AVERAGE_RATING)
+					: [
+							'step',
+							['zoom'],
+							[
+								'step',
+								['get', 'point_count'],
+								'rgba(23, 106, 60)', // green stroke
+								POINT_COUNT_THRESHOLD_1,
+								'rgba(255, 152, 0)', // orange stroke
+								POINT_COUNT_THRESHOLD_2,
+								'rgba(156, 47, 47)' // red stroke
+							],
+							MAX_ZOOM,
+							SPOT_STROKE_COLOR
+						]
 			}}
 		/>
 
