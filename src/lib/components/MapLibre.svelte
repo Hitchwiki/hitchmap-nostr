@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { DEFAULT_KINDS } from '$lib/constants';
 	import type { Feature, Geometry } from 'geojson';
 	import {
 		CircleLayer,
