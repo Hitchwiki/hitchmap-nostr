@@ -306,7 +306,7 @@
 							)}</pre>
 					</details>
 					{@render overview(
-						clickedFeature.total_rating / clickedFeature.point_count,
+						clickedFeature.total_rating / clickedFeature.total_rating_count,
 						undefined,
 						undefined
 					)}

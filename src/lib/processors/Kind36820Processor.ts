@@ -48,8 +48,7 @@ export class Kind36820Processor extends DefaultProcessor {
 				geohash: coordinates.geohash || undefined,
 				coordinates: coordinates.lngLat,
 				tags: event.tags,
-				/** @todo Remove the random calculation when data is available. */
-				rating: typeof rating !== 'undefined' ? rating : Math.floor(Math.random() * 5) + 1
+				rating,
 			}
 		};
 	}

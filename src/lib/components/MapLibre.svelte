@@ -96,7 +96,8 @@
 		cluster={{
 			radius: 75,
 			properties: {
-				total_rating: ['+', ['get', 'rating']]
+				total_rating: ['+', ['case', ['has', 'rating'], ['get', 'rating'], 0]],
+				total_rating_count: ['+', ['case', ['has', 'rating'], 1, 0]]
 			}
 		}}
 	>
@@ -120,7 +121,7 @@
 						'rgba(156, 47, 47, 0.9)' // red for >=300
 					],
 					MAX_ZOOM,
-					createPointColor(['/', ['get', 'total_rating'], ['get', 'point_count']])
+					createPointColor(['/', ['get', 'total_rating'], ['get', 'total_rating_count']])
 				],
 				'circle-radius': [
 					'step',
