@@ -231,9 +231,14 @@
 				<summary class="flex list-none items-center justify-between">
 					{#if entry.time}
 						<div class="text-xs text-gray-500">
+							<!-- Cascade of hell, maybe move into a component to use $derived or similar. -->
 							- {#if entry.pubkey}
-								{#await ndk.fetchUser(entry.pubkey) then user}
-									{#await user?.fetchProfile() then profile}
+								{#await ndk.fetchUser(entry.pubkey)}
+									{username ?? 'Anonymous'}
+								{:then user}
+									{#await user?.fetchProfile()}
+										{username ?? 'Anonymous'}
+									{:then profile}
 										{#if profile}
 											<button
 												class="text-blue-500 hover:underline"
