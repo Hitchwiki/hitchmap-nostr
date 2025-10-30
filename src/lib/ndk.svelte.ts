@@ -19,8 +19,10 @@ let selectedRelayUrls = new SvelteSet(DEFAULT_RELAYS);
 export const availableRelays = DEFAULT_RELAYS;
 
 export let signer: {
+	state: 'initialized' | 'pending' | 'error';
 	instance: NDKPrivateKeySigner | NDKNip07Signer | undefined;
 } = $state({
+	state: 'pending',
 	instance: undefined
 });
 
@@ -34,36 +36,44 @@ export const ndk = new NDKSvelte({
 export async function initializeSigner() {
 	if (signer.instance) return signer.instance;
 
-	if (window.nostr) {
-		try {
-			const nip07Signer = new NDKNip07Signer();
-			await nip07Signer.blockUntilReady();
-			signer.instance = nip07Signer;
+	signer.state = 'pending';
+
+	try {
+		const setSigner = (newSigner: NDKPrivateKeySigner | NDKNip07Signer) => {
+			signer.instance = newSigner;
 			ndk.signer = signer.instance;
+			signer.state = 'initialized';
 			return signer.instance;
-		} catch (e) {
-			console.warn('Failed to initialize NIP-07 signer, falling back to private key signer.', e);
+		};
+
+		if (window.nostr) {
+			try {
+				const nip07Signer = new NDKNip07Signer();
+				await nip07Signer.blockUntilReady();
+				return setSigner(nip07Signer);
+			} catch (e) {
+				console.warn('Failed to initialize NIP-07 signer, falling back to private key signer.', e);
+			}
 		}
-	}
 
-	const storedSigner = localStorage.getItem('hitchmap:signer');
-	if (storedSigner) {
-		signer.instance = await NDKPrivateKeySigner.fromPayload(storedSigner, ndk);
-		ndk.signer = signer.instance;
-		return signer.instance;
-	}
+		const storedSigner = localStorage.getItem('hitchmap:signer');
+		if (storedSigner) {
+			return setSigner(await NDKPrivateKeySigner.fromPayload(storedSigner, ndk));
+		}
 
-	const ncryptsec = localStorage.getItem('hitchmap:ncryptsec');
-	if (ncryptsec) {
-		signer.instance = NDKPrivateKeySigner.fromNcryptsec(ncryptsec, 'password', ndk);
-		ndk.signer = signer.instance;
-		return signer.instance;
-	}
+		const ncryptsec = localStorage.getItem('hitchmap:ncryptsec');
+		if (ncryptsec) {
+			return setSigner(NDKPrivateKeySigner.fromNcryptsec(ncryptsec, 'password', ndk));
+		}
 
-	signer.instance = NDKPrivateKeySigner.generate();
-	ndk.signer = signer.instance;
-	localStorage.setItem('hitchmap:signer', await signer.instance.toPayload());
-	return signer.instance;
+		const privateKeySigner = NDKPrivateKeySigner.generate();
+		localStorage.setItem('hitchmap:signer', privateKeySigner.toPayload());
+		return setSigner(privateKeySigner);
+	} catch (e) {
+		signer.instance = undefined;
+		signer.state = 'error';
+		console.error(e);
+	}
 }
 
 export async function resetSigner() {
@@ -83,5 +93,9 @@ export async function resetSigner() {
 		await cacheAdapter?.initializeAsync?.(ndk);
 	}
 
-	ndk.connect().then(() => console.log('NDK Connected'));
+	await ndk.connect().then(() => console.log('NDK Connected'));
+
+	initializeSigner().then((signer) => {
+		console.log('NDK Signer initialized:', signer);
+	});
 })();

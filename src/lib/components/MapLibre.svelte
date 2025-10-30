@@ -1,34 +1,29 @@
 <script lang="ts">
 	import { DEFAULT_KINDS } from '$lib/constants';
+	import { mapStore } from '$lib/mapStore.svelte';
+	import { type SingleProperties } from '$lib/processors/types';
 	import type { Feature, Geometry } from 'geojson';
+	import { CrosshairSimple } from 'phosphor-svelte';
+	import { onMount } from 'svelte';
 	import {
 		CircleLayer,
 		GeoJSON,
 		type LayerClickInfo,
 		MapLibre,
+		Marker,
 		SymbolLayer
 	} from 'svelte-maplibre';
 
-	type SingleProperties = {
-		id: string;
-		pubkey: string;
-		user: any;
-		time: number;
-		username?: string;
-		content: string;
-		geohash?: string;
-		coordinates: [number, number];
-		tags: any[];
-		rating?: number;
-	};
-
 	let {
 		onClick,
+		onAddSpot,
 		data,
 		map = $bindable(undefined),
 		...props
 	}: {
+		class: string;
 		onClick: (feature: SingleProperties | null) => void;
+		onAddSpot?: (coordinates: [number, number]) => void;
 		data: GeoJSON.FeatureCollection<Geometry, SingleProperties>;
 		map: maplibregl.Map | undefined;
 	} = $props();
@@ -89,6 +84,7 @@
 	});
 
 	// Constants and helpers for styling
+	const MIN_ZOOM = 2;
 	const MAX_ZOOM = 14;
 
 	const CLUSTER_STROKE_WIDTH = 6;
@@ -132,11 +128,20 @@
 			'#2ecc40' // brighter green for good (rating 5)
 		] as any;
 	};
+
+	onMount(() => {
+		map?.on('move', () => {
+			if (!map) return;
+			mapStore.currentCoords = [map.getCenter().lng, map.getCenter().lat];
+			mapStore.currentZoom = map.getZoom();
+		});
+	});
 </script>
 
 <MapLibre
-	center={[50, 20]}
+	center={[-98.5795, 39.8283]}
 	zoom={2}
+	minZoom={MIN_ZOOM}
 	maxZoom={MAX_ZOOM}
 	standardControls
 	attributionControl={false}
@@ -146,6 +151,13 @@
 	bind:map
 	{...props}
 >
+	{#if mapStore.isAddingSpot && mapStore.currentCoords}
+		<Marker
+			lngLat={mapStore.currentCoords}
+			class="flex size-3 items-center justify-center rounded-full bg-fuchsia-500 border"
+		></Marker>
+	{/if}
+
 	<GeoJSON
 		id="notes"
 		data={filteredData}
