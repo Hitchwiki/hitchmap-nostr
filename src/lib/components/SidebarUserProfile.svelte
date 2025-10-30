@@ -64,12 +64,13 @@
 
 {#if isCurrentUser}
 	<div
-		class="mb-4 flex flex-col items-center gap-2 rounded border-l-2 border-yellow-400 bg-yellow-50 p-3 text-yellow-800 text-xs text-center"
+		class="mb-4 flex flex-col items-center gap-2 rounded border-l-2 border-yellow-400 bg-yellow-50 p-3 text-center text-xs text-yellow-800
+			dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-200"
 	>
 		<WarningCircle size={24} class="shrink-0" />
 		<span>
-			Profile editing is still limited in this Nostr client. Some changes may not be saved or reflected
-			properly.
+			Profile editing is still limited in this Nostr client. Some changes may not be saved or
+			reflected properly.
 		</span>
 	</div>
 {/if}
@@ -82,7 +83,7 @@
 			class="h-15 w-15 rounded-full border-2 border-gray-300 object-cover"
 		/>
 	{/if}
-	<h2 class="m-0 flex items-center gap-2 text-xl font-semibold">
+	<h2 class="m-0 flex items-center gap-1 text-xl font-semibold">
 		{#if isCurrentUser}
 			{#if editingName}
 				<input
@@ -95,7 +96,7 @@
 			{:else}
 				<span>{selectedUser.display_name || selectedUser.name || 'User'}</span>
 				<button
-					class="ml-2 rounded bg-gray-200 px-2 py-1 text-xs hover:bg-gray-300"
+					class="ml-2 rounded bg-gray-200 px-2 py-1 text-xs hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
 					onclick={startEditName}
 					aria-label="Edit username"
 					title="Edit username">✎</button
@@ -109,42 +110,42 @@
 <div>
 	{#if selectedUser.name}
 		<p class="my-2 leading-relaxed">
-			<strong class="text-gray-600">Name:</strong>
+			<strong>Name:</strong>
 			{selectedUser.name}
 		</p>
 	{/if}
 	{#if selectedUser.about}
 		<p class="my-2 leading-relaxed">
-			<strong class="text-gray-600">About:</strong>
+			<strong>About:</strong>
 			{selectedUser.about}
 		</p>
 	{/if}
 	{#if selectedUser.nip05}
 		<p class="my-2 leading-relaxed">
-			<strong class="text-gray-600">NIP-05:</strong>
+			<strong>NIP-05:</strong>
 			{selectedUser.nip05}
 		</p>
 	{/if}
 	{#if selectedUser.website}
 		<p class="my-2 leading-relaxed">
-			<strong class="text-gray-600">Website:</strong>
+			<strong>Website:</strong>
 			<a
 				href={selectedUser.website}
 				target="_blank"
 				rel="noopener noreferrer"
-				class="text-blue-600 hover:underline">{selectedUser.website}</a
+				class="text-blue-500 hover:underline">{selectedUser.website}</a
 			>
 		</p>
 	{/if}
 	{#if selectedUser.bot !== undefined}
 		<p class="my-2 leading-relaxed">
-			<strong class="text-gray-600">Bot:</strong>
+			<strong>Bot:</strong>
 			{selectedUser.bot ? 'Yes' : 'No'}
 		</p>
 	{/if}
 	<p class="my-2 leading-relaxed">
-		<strong class="text-gray-600">Pubkey:</strong>
-		<code class="rounded bg-gray-200 px-1.5 py-0.5 font-mono text-sm break-all"
+		<strong>Pubkey:</strong>
+		<code class="rounded bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 font-mono text-sm break-all"
 			>{selectedUser.pubkey}</code
 		>
 	</p>

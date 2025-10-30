@@ -126,7 +126,7 @@
 
 <div class="space-y-4">
 	<div>
-		<label for="rating" class="mb-2 block text-sm font-medium text-gray-700">
+		<label for="rating" class="mb-2 block text-sm font-medium">
 			Rating <span class="text-red-500">*</span>
 		</label>
 		<div class="flex gap-1">
@@ -149,7 +149,7 @@
 	</div>
 
 	<div>
-		<label for="comment" class="mb-1 block text-sm font-medium text-gray-700"> Comment </label>
+		<label for="comment" class="mb-1 block text-sm font-medium"> Comment </label>
 		<textarea
 			id="comment"
 			class="resize-vertical w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
@@ -157,20 +157,20 @@
 			rows="3"
 			bind:value={rideData.comment}
 		></textarea>
-		<p class="mt-1 text-xs text-gray-500">{rideData.comment.length}/500 characters</p>
+		<p class="mt-1 text-xs opacity-50">{rideData.comment.length}/500 characters</p>
 	</div>
 
 	<div>
-		<label for="location" class="mb-2 block text-sm font-medium text-gray-700">
+		<label for="location" class="mb-2 block text-sm font-medium">
 			Location <span class="text-red-500">*</span>
 		</label>
-		<p class="mb-2 text-sm text-gray-600">Please select your location on the map by dragging it.</p>
+		<p class="mb-2 text-sm opacity-50">Please select your location on the map by dragging it.</p>
 		{#if mapStore.currentCoords}
-			<div class="flex w-full uppercase text-xs bg-gray-200 p-2">
-				<span class="w-1/2 truncate text-gray-800" title="Latitude">
+			<div class="flex w-full uppercase text-xs bg-gray-200 dark:bg-gray-950 p-2">
+				<span class="w-1/2 truncate text-gray-800 dark:text-gray-200" title="Latitude">
 					Lat: {mapStore.currentCoords[1].toFixed(6)}
 				</span>
-				<span class="w-1/2 truncate text-gray-800" title="Longitude">
+				<span class="w-1/2 truncate text-gray-800 dark:text-gray-200" title="Longitude">
 					Lng: {mapStore.currentCoords[0].toFixed(6)}
 				</span>
 			</div>

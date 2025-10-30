@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { DEFAULT_KINDS } from '$lib/constants';
 	import { mapStore } from '$lib/mapStore.svelte';
 	import { type SingleProperties } from '$lib/processors/types';
@@ -84,6 +85,17 @@
 	});
 
 	// Constants and helpers for styling
+	const LIGHT_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+	const DARK_STYLE = 'https://tiles.openfreemap.org/styles/dark';
+
+	let style = $state(
+		!browser
+			? LIGHT_STYLE
+			: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+				? DARK_STYLE
+				: LIGHT_STYLE
+	);
+
 	const MIN_ZOOM = 2;
 	const MAX_ZOOM = 14;
 
@@ -132,8 +144,24 @@
 	onMount(() => {
 		map?.on('move', () => {
 			if (!map) return;
-			mapStore.currentCoords = [map.getCenter().lng, map.getCenter().lat];
-			mapStore.currentZoom = map.getZoom();
+			const { lat, lng } = map.getCenter();
+			const zoom = map.getZoom();
+			mapStore.currentCoords = [lng, lat];
+			mapStore.currentZoom = zoom;
+		});
+
+		map?.on('moveend', () => {
+			if (!map) return;
+			// Update URL hash in OSM style: #map=zoom/lat/lng
+			const { lat, lng } = map.getCenter();
+			const zoom = map.getZoom();
+			const url = new URL(window.location.href);
+			url.hash = `map=${zoom.toFixed(2)}/${lat.toFixed(5)}/${lng.toFixed(5)}`;
+			window.history.replaceState({}, '', url);
+		});
+
+		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+			style = e.matches ? DARK_STYLE : LIGHT_STYLE;
 		});
 	});
 </script>
@@ -145,16 +173,16 @@
 	maxZoom={MAX_ZOOM}
 	standardControls
 	attributionControl={false}
-	style="https://tiles.openfreemap.org/styles/liberty"
 	onclick={() => onClick(null)}
 	projection={{ type: 'globe' }}
+	{style}
 	bind:map
 	{...props}
 >
 	{#if mapStore.isAddingSpot && mapStore.currentCoords}
 		<Marker
 			lngLat={mapStore.currentCoords}
-			class="flex size-3 items-center justify-center rounded-full bg-fuchsia-500 border"
+			class="flex size-3 items-center justify-center rounded-full border bg-fuchsia-500"
 		></Marker>
 	{/if}
 

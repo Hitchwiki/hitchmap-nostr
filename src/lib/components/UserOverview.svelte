@@ -65,7 +65,7 @@
 	{#if loadAll}
 		<Button
 			class={[
-				'flex size-12 items-center justify-center rounded-full bg-white',
+				'flex size-12 items-center justify-center rounded-full bg-white dark:bg-gray-900',
 				isLoadingInBackground ? 'animate-pulse' : ''
 			].join(' ')}
 			onclick={() => (refreshConfirmOpen = true)}
@@ -76,7 +76,7 @@
 	{/if}
 
 	<Button
-		class="flex size-12 items-center justify-center rounded-full bg-white"
+		class="flex size-12 items-center justify-center rounded-full bg-white dark:bg-gray-900"
 		onclick={() => {
 			setIsAddingSpot(true);
 			openSidebar();
@@ -86,7 +86,7 @@
 	</Button>
 
 	<Button
-		class="flex size-12 items-center justify-center rounded-full bg-white"
+		class="flex size-12 items-center justify-center rounded-full bg-white dark:bg-gray-900"
 		onclick={() => {
 			if (mapStore.sidebarOpen && !mapStore.selectedFeature && !mapStore.selectedUser) {
 				closeSidebar();
@@ -101,7 +101,7 @@
 	</Button>
 
 	<Button
-		class="flex items-center justify-center gap-2 rounded-full bg-white p-2 pr-4 text-left text-xs"
+		class="flex items-center justify-center gap-2 rounded-full bg-white p-2 pr-4 text-left text-xs dark:bg-gray-900"
 		onclick={() => {
 			if (mapStore.selectedUser?.pubkey === currentPubkey) {
 				closeSidebar();

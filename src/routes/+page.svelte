@@ -163,7 +163,7 @@
 <main class="flex flex-col md:flex-row h-full max-h-full w-full p-2">
 	<div class="relative flex-1 h-full max-h-full w-full rounded-2xl overflow-hidden">
 		{#if loadingState === 'loading'}
-			<div class="absolute inset-0 z-50 flex items-center justify-center bg-gray-200/50 backdrop-blur-sm">
+			<div class="absolute inset-0 z-50 flex items-center justify-center bg-gray-200/50 dark:bg-gray-800/50 backdrop-blur-sm">
 				<div class="flex flex-col items-center gap-4 rounded-lg bg-white p-6 shadow-lg">
 					<div
 						class="size-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"
@@ -185,7 +185,7 @@
 		<Notice class="absolute right-2 bottom-2 z-20" />
 
 		<MapLibre
-			class="relative h-full w-full bg-gray-200"
+			class="relative h-full w-full bg-gray-200 dark:bg-gray-800"
 			data={notesOnMap}
 			onClick={(feature) => {
 				if (!feature) {
