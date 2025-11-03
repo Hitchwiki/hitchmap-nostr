@@ -188,6 +188,30 @@
 	} satisfies MaplibreGeocoderApi;
 
 	onMount(() => {
+		// Parse #map=zoom/lat/lng from URL hash and set mapStore.currentCoords and currentZoom
+		if (browser && window.location.hash.startsWith('#map=')) {
+			const match = window.location.hash.match(/^#map=([\d.]+)\/([\d.-]+)\/([\d.-]+)/);
+			if (match) {
+				const [, zoomStr, latStr, lngStr] = match;
+				const zoom = parseFloat(zoomStr);
+				const lat = parseFloat(latStr);
+				const lng = parseFloat(lngStr);
+				
+				if (!isNaN(lat) && !isNaN(lng)) {
+					mapStore.currentCoords = [lng, lat];
+				}
+
+				if (!isNaN(zoom)) {
+					mapStore.currentZoom = zoom;
+				}
+
+				// Optionally move the map immediately if available
+				if (map) {
+					map.jumpTo({ center: [lng, lat], zoom });
+				}
+			}
+		}
+
 		map?.addControl(
 			new MaplibreGeocoder(geocoderApi, {
 				maplibregl,
