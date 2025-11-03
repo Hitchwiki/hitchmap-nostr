@@ -6,7 +6,7 @@
 	import MaplibreGeocoder, { type MaplibreGeocoderApi } from '@maplibre/maplibre-gl-geocoder';
 	import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
 	import type { Feature, Geometry } from 'geojson';
-	import maplibregl from 'maplibre-gl';
+	import maplibregl, { type LngLatLike } from 'maplibre-gl';
 	import { onMount } from 'svelte';
 	import {
 		CircleLayer,
@@ -192,7 +192,7 @@
 			new MaplibreGeocoder(geocoderApi, {
 				maplibregl,
 				marker: false,
-				placeholder: 'Search for places',
+				placeholder: 'Search for places'
 			}),
 			'top-left'
 		);
@@ -255,7 +255,38 @@
 		<CircleLayer
 			id="cluster_circles"
 			applyToClusters
-			onclick={(e: LayerClickInfo<Feature<Geometry, any>>) => onClick(e.features?.[0]?.properties)}
+			onclick={async (e: LayerClickInfo<Feature<Geometry, any>>) => {
+				const feature = e.features?.[0];
+				onClick(feature?.properties);
+
+				// If this is a cluster, zoom to its bounds
+				if (feature && feature.properties && feature.properties.cluster_id && map) {
+					const source = map.getSource('notes') as import('maplibre-gl').GeoJSONSource | undefined;
+					if (
+						source &&
+						'getClusterExpansionZoom' in source &&
+						typeof source.getClusterExpansionZoom === 'function'
+					) {
+						try {
+							// getClusterExpansionZoom returns a Promise<number> in maplibre-gl >=2.4.0
+							const zoom = await (
+								source.getClusterExpansionZoom as (clusterId: number) => Promise<number>
+							)(feature.properties.cluster_id);
+							// Get cluster coordinates
+							const coords =
+								feature.geometry.type === 'Point' ? feature.geometry.coordinates : null;
+							if (coords && map) {
+								map.easeTo({
+									center: coords as [number, number],
+									zoom: zoom
+								});
+							}
+						} catch (err) {
+							console.error('Error expanding cluster:', err);
+						}
+					}
+				}
+			}}
 			hoverCursor="pointer"
 			manageHoverState
 			paint={{
@@ -336,11 +367,15 @@
 			applyToClusters={false}
 			onclick={(e: LayerClickInfo<Feature<Geometry, SingleProperties>>) => {
 				const props = e.features?.[0]?.properties;
-				if (!props) return;
+				const geometry = e.features?.[0]?.geometry;
+				const coords =
+					geometry && geometry.type !== 'GeometryCollection'
+						? (geometry as Extract<Geometry, { coordinates: any }>).coordinates
+						: undefined;
+				if (!props || !coords) return;
 				const parsed = Object.fromEntries(
 					Object.entries(props).map(([key, value]) => {
 						try {
-							// Try to parse JSON, fallback to number, else keep as is
 							if (typeof value === 'string') {
 								try {
 									return [key, JSON.parse(value)];
@@ -355,7 +390,13 @@
 						}
 					})
 				);
+
 				onClick(parsed as any);
+
+				// Jump to the feature's coordinates
+				setTimeout(() => {
+					map?.flyTo({ center: coords as LngLatLike, zoom: Math.max(map.getZoom(), 14) });
+				}, 10);
 			}}
 			hoverCursor="pointer"
 			paint={{
