@@ -135,6 +135,28 @@
 		}
 	});
 
+	/** @todo Remove this stupid variable and fix the effect or do it onMount or something. */
+	let hasMatchedOnLoad = false;
+
+	$effect(() => {
+		// Only run this effect once after loading completes
+		if (!hasMatchedOnLoad && loadingState === null && notesOnMap.features.length > 0) {
+			const [lng, lat] = mapStore.currentCoords || [];
+			if (lat != null && lng != null) {
+				const match = notesOnMap.features.find((f) => {
+					const [featureLng, featureLat] = f.geometry?.coordinates || [];
+					const epsilon = 0.0001;
+					return Math.abs(featureLat - lat) < epsilon && Math.abs(featureLng - lng) < epsilon;
+				});
+				if (match) {
+					setSelectedFeature(match.properties);
+					openSidebar();
+				}
+			}
+			hasMatchedOnLoad = true;
+		}
+	});
+
 	onMount(async () => {
 		ndk.subscribe(
 			{
@@ -165,9 +187,7 @@
 	<div class="relative h-full max-h-full w-full flex-1 overflow-hidden rounded-2xl">
 		{#if loadingState === 'loading'}
 			<Modal open>
-				<div
-					class="flex flex-col items-center gap-4"
-				>
+				<div class="flex flex-col items-center gap-4">
 					<div
 						class="size-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600 dark:border-blue-900 dark:border-t-blue-400"
 					></div>
