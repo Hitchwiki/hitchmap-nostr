@@ -3,8 +3,10 @@
 	import { DEFAULT_KINDS } from '$lib/constants';
 	import { mapStore } from '$lib/mapStore.svelte';
 	import { type SingleProperties } from '$lib/processors/types';
+	import MaplibreGeocoder, { type MaplibreGeocoderApi } from '@maplibre/maplibre-gl-geocoder';
+	import '@maplibre/maplibre-gl-geocoder/dist/maplibre-gl-geocoder.css';
 	import type { Feature, Geometry } from 'geojson';
-	import { CrosshairSimple } from 'phosphor-svelte';
+	import maplibregl from 'maplibre-gl';
 	import { onMount } from 'svelte';
 	import {
 		CircleLayer,
@@ -141,7 +143,60 @@
 		] as any;
 	};
 
+	const geocoderApi = {
+		forwardGeocode: async (config) => {
+			const features = [];
+			try {
+				const request = `https://nominatim.openstreetmap.org/search?q=${
+					config.query
+				}&format=geojson&polygon_geojson=1&addressdetails=1`;
+				const response = await fetch(request);
+				const geojson = await response.json();
+				for (const feature of geojson.features) {
+					const center = [
+						feature.bbox[0] + (feature.bbox[2] - feature.bbox[0]) / 2,
+						feature.bbox[1] + (feature.bbox[3] - feature.bbox[1]) / 2
+					];
+					const id = feature.properties.osm_id
+						? `${feature.properties.osm_type || 'nominatim'}.${feature.properties.osm_id}`
+						: feature.properties.display_name || Math.random().toString(36).slice(2);
+					const point = {
+						type: 'Feature' as const,
+						id,
+						geometry: {
+							type: 'Point' as const,
+							coordinates: center
+						},
+						place_name: feature.properties.display_name,
+						properties: feature.properties,
+						text: feature.properties.display_name,
+						place_type: ['place'],
+						center,
+						bbox: feature.bbox
+					};
+					features.push(point);
+				}
+			} catch (e) {
+				console.error(`Failed to forwardGeocode with error: ${e}`);
+			}
+
+			return {
+				type: 'FeatureCollection' as const,
+				features
+			};
+		}
+	} satisfies MaplibreGeocoderApi;
+
 	onMount(() => {
+		map?.addControl(
+			new MaplibreGeocoder(geocoderApi, {
+				maplibregl,
+				marker: false,
+				placeholder: 'Search for places',
+			}),
+			'top-left'
+		);
+
 		map?.on('move', () => {
 			if (!map) return;
 			const { lat, lng } = map.getCenter();

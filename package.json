@@ -66,6 +66,7 @@
   },
   "packageManager": "pnpm@10.19.0",
   "dependencies": {
+    "@maplibre/maplibre-gl-geocoder": "^1.9.1",
     "@nostr-dev-kit/cache-sqlite-wasm": "^0.8.2",
     "@nostr-dev-kit/ndk": "^2.18.1",
     "@nostr-dev-kit/svelte": "^3.0.1",
