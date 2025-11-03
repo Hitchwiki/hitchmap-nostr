@@ -152,7 +152,7 @@
 		<label for="comment" class="mb-1 block text-sm font-medium"> Comment </label>
 		<textarea
 			id="comment"
-			class="resize-vertical w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+			class="resize-vertical w-full rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:focus:border-blue-400"
 			placeholder="Share your experience..."
 			rows="3"
 			bind:value={rideData.comment}
@@ -166,7 +166,7 @@
 		</label>
 		<p class="mb-2 text-sm opacity-50">Please select your location on the map by dragging it.</p>
 		{#if mapStore.currentCoords}
-			<div class="flex w-full uppercase text-xs bg-gray-200 dark:bg-gray-950 p-2">
+			<div class="flex w-full bg-gray-200 p-2 text-xs uppercase dark:bg-gray-950">
 				<span class="w-1/2 truncate text-gray-800 dark:text-gray-200" title="Latitude">
 					Lat: {mapStore.currentCoords[1].toFixed(6)}
 				</span>
