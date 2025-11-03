@@ -196,7 +196,7 @@
 				const zoom = parseFloat(zoomStr);
 				const lat = parseFloat(latStr);
 				const lng = parseFloat(lngStr);
-				
+
 				if (!isNaN(lat) && !isNaN(lng)) {
 					mapStore.currentCoords = [lng, lat];
 				}
@@ -419,7 +419,11 @@
 
 				// Jump to the feature's coordinates
 				setTimeout(() => {
-					map?.flyTo({ center: coords as LngLatLike, zoom: Math.max(map.getZoom(), 14) });
+					map?.flyTo({
+						center: coords as LngLatLike,
+						zoom: Math.max(map.getZoom(), 14),
+						duration: 500
+					});
 				}, 10);
 			}}
 			hoverCursor="pointer"
