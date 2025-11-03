@@ -2,6 +2,7 @@
 	import MapLibre from '$lib/components/MapLibre.svelte';
 	import Notice from '$lib/components/Notice.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 	import UserOverview from '$lib/components/UserOverview.svelte';
 	import { DEFAULT_FILTERS } from '$lib/constants';
 	import { EventProcessorWorkerManager } from '$lib/eventProcessor';
@@ -163,11 +164,9 @@
 <main class="flex h-full max-h-full w-full flex-col p-2 md:flex-row">
 	<div class="relative h-full max-h-full w-full flex-1 overflow-hidden rounded-2xl">
 		{#if loadingState === 'loading'}
-			<div
-				class="absolute inset-0 z-50 flex items-center justify-center bg-gray-200/50 backdrop-blur-sm dark:bg-gray-800/50"
-			>
+			<Modal open>
 				<div
-					class="flex flex-col items-center gap-4 rounded-lg bg-white p-6 shadow-lg dark:bg-gray-900"
+					class="flex flex-col items-center gap-4"
 				>
 					<div
 						class="size-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600 dark:border-blue-900 dark:border-t-blue-400"
@@ -176,7 +175,7 @@
 						Processing notes ({processedEvents}/{eventsToProcess})...
 					</p>
 				</div>
-			</div>
+			</Modal>
 		{/if}
 
 		<UserOverview
