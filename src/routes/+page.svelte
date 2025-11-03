@@ -160,15 +160,19 @@
 	const showSidebar = $derived(mapStore.sidebarOpen);
 </script>
 
-<main class="flex flex-col md:flex-row h-full max-h-full w-full p-2">
-	<div class="relative flex-1 h-full max-h-full w-full rounded-2xl overflow-hidden">
+<main class="flex h-full max-h-full w-full flex-col p-2 md:flex-row">
+	<div class="relative h-full max-h-full w-full flex-1 overflow-hidden rounded-2xl">
 		{#if loadingState === 'loading'}
-			<div class="absolute inset-0 z-50 flex items-center justify-center bg-gray-200/50 dark:bg-gray-800/50 backdrop-blur-sm">
-				<div class="flex flex-col items-center gap-4 rounded-lg bg-white p-6 shadow-lg">
+			<div
+				class="absolute inset-0 z-50 flex items-center justify-center bg-gray-200/50 backdrop-blur-sm dark:bg-gray-800/50"
+			>
+				<div
+					class="flex flex-col items-center gap-4 rounded-lg bg-white p-6 shadow-lg dark:bg-gray-900"
+				>
 					<div
-						class="size-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"
+						class="size-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600 dark:border-blue-900 dark:border-t-blue-400"
 					></div>
-					<p class="text-lg font-medium">
+					<p class="text-lg font-medium text-gray-900 dark:text-gray-100">
 						Processing notes ({processedEvents}/{eventsToProcess})...
 					</p>
 				</div>
@@ -201,7 +205,7 @@
 	</div>
 
 	{#if showSidebar}
-		<section class={['max-h-1/2 md:max-h-full md:w-1/3 overflow-hidden overflow-y-auto p-6 py-8']}>
+		<section class={['max-h-1/2 overflow-hidden overflow-y-auto p-6 py-8 md:max-h-full md:w-1/3']}>
 			<Sidebar {map} />
 		</section>
 	{/if}

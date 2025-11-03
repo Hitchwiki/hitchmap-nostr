@@ -77,7 +77,7 @@
 				{/if}
 				<span class="cursor-pointer text-xs text-gray-400">Show raw data</span>
 			</summary>
-			<pre class="bg-gray-100 p-2 text-xs whitespace-pre-wrap">{JSON.stringify(
+			<pre class="bg-gray-100 dark:bg-gray-800 p-2 text-xs whitespace-pre-wrap">{JSON.stringify(
 					Object.fromEntries(Object.entries(entry.rawEvent).reverse()),
 					null,
 					2
@@ -118,7 +118,7 @@
 				<h2 class="font-bold">Cluster ({selectedFeature.point_count} points)</h2>
 				<span class="cursor-pointer text-xs text-gray-400">Show raw data</span>
 			</summary>
-			<pre class="bg-gray-100 p-2 text-xs whitespace-pre-wrap">{JSON.stringify(
+			<pre class="bg-gray-100 dark:bg-gray-800 p-2 text-xs whitespace-pre-wrap">{JSON.stringify(
 					{ ...selectedFeature, children },
 					null,
 					2
