@@ -1,3 +1,5 @@
+As of April 2026 this https://github.com/Hitchwiki/maps.hitchwiki.org is Hitchwiki's map that makes use of the Nostr standard.
+
 # 🌍 Hitchmap
 
 [![License](https://img.shields.io/badge/License-Unlicense-blue.svg)](https://unlicense.org/)
